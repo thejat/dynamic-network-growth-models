@@ -62,7 +62,7 @@ if __name__=='__main__':
 	betaTrue = 0.9
 
 	st = time.time()
-	GT = generate_random_dynamic_graphs(alpha=alphaTrue,beta=betaTrue,total_time=20,flag_arrivals=False)
+	GT = generate_random_dynamic_graphs(alpha=alphaTrue,beta=betaTrue,total_time=3,flag_arrivals=False)
 	print "generated data, time taken:",time.time() - st
 	st = time.time() 
 	alpha,beta = estimate_random_dynamic_no_arrival(GT)

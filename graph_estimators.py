@@ -40,7 +40,8 @@ def estimate_random_dynamic_no_arrival(GT):
 
 
 
-	pterm = n_nodes*(n_nodes-1)*.5*p
+	pterm = n_nodes*(n_nodes-1)*.5*p #initialize
+	beta = 0.5 #initialize
 	for k in range(Kmax):
 		alpha = (t1 - pterm +t3)/(t1 - pterm +t3)
 		pterm = n_nodes*(n_nodes-1)*.5*(alpha/(alpha+beta))

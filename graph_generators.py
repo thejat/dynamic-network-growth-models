@@ -1,7 +1,8 @@
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
-from graph_estimators import estimate_random_dynamic_no_arrival
+np.random.seed(1000)
+from graph_estimators import estimate_random_dynamic_no_arrival_recursive,estimate_random_dynamic_no_arrival_gridsearch
 import time
 
 
@@ -64,9 +65,17 @@ if __name__=='__main__':
 	st = time.time()
 	GT = generate_random_dynamic_graphs(alpha=alphaTrue,beta=betaTrue,total_time=3,flag_arrivals=False)
 	print "generated data, time taken:",time.time() - st
-	st = time.time() 
-	alpha,beta = estimate_random_dynamic_no_arrival(GT)
-	print "estimated from data, time taken: ",time.time() - st
 
+	st = time.time() 	
+	alpha,beta = estimate_random_dynamic_no_arrival_recursive(GT)
+	print "estimated from data, time taken: ",time.time() - st
 	print "True vals: alpha",alphaTrue," beta",betaTrue
 	print "Estimates: alpha",alpha," beta ",beta
+	
+	st = time.time() 
+	alpha,beta = estimate_random_dynamic_no_arrival_gridsearch(GT)
+	print "estimated from data, time taken: ",time.time() - st
+	print "True vals: alpha",alphaTrue," beta",betaTrue
+	print "Estimates: alpha",alpha," beta ",beta
+
+

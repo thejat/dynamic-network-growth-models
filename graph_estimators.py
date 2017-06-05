@@ -116,8 +116,8 @@ def get_statistics_arrivals(GT):
 	#terms C and F
 	for t in range(1, len(GT)):
 		npt = len(GT[t].nodes())
-		for j in range(npt):
-			for i in range(0, j):
+		j = npt-1
+		for i in range(0, j):
 				termlambda['C'] += AT[t][i,j]
 
 	termlambda['F'] = termlambda['C']
@@ -148,8 +148,8 @@ def get_statistics_arrivals(GT):
 	#termmu W and Z
 	for t in range(1, len(GT)):
 		npt = len(GT[t].nodes())
-		for j in range(npt):
-			for i in range(0, j):
+		j = npt-1
+		for i in range(0, j):
 				termmu['W'] += (-AT[t][i,j])
 
 	termmu['Z'] = termmu['W']
@@ -159,8 +159,7 @@ def get_statistics_arrivals(GT):
 	coeff_sumt_nptC2p = 0
 	for t in range(1, len(GT)):
 		npt = len(GT[t].nodes())
-		for j in range(npt):
-			for i in range(0, j):
+		for i in range(0, npt-1):
 				coeff_sumt_nptC2p += 1
 
 
@@ -178,7 +177,7 @@ def estimate_random_dynamic_with_arrival_recursive(GT):
 	print meta['termmu']
 	print meta['coeff_p']
 
-	Kmax = 1
+	Kmax = 1000
 
 	p = 0.5 #initialize
 	for k in range(Kmax):
@@ -187,10 +186,10 @@ def estimate_random_dynamic_with_arrival_recursive(GT):
 				/(meta['termlambda']['D'] - meta['coeff_p'][0]*p \
 				+meta['termlambda']['E'] + meta['termlambda']['F'] - meta['coeff_p'][1]*p)
 
-		mu = (meta['termmu']['U'] - meta['coeff_p'][0]*p \
-				+meta['termmu']['V'] + meta['termmu']['W'] - meta['coeff_p'][1]*p)\
-				/(meta['termmu']['X'] - meta['coeff_p'][0]*p \
-				+meta['termmu']['Y'] + meta['termmu']['Z'] - meta['coeff_p'][1]*p)
+		mu = (meta['termmu']['U'] + meta['coeff_p'][0]*p \
+				+meta['termmu']['V'] + meta['termmu']['W'] + meta['coeff_p'][1]*p)\
+				/(meta['termmu']['X'] + meta['coeff_p'][0]*p \
+				+meta['termmu']['Y'] + meta['termmu']['Z'] + meta['coeff_p'][1]*p)
 
 		print 'mu',mu
 		

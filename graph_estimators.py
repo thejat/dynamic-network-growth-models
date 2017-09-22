@@ -173,14 +173,16 @@ def estimate_random_dynamic_with_arrival_recursive(GT):
 	print "Estimating parameters"
 
 	meta = get_statistics_arrivals(GT)
-	print meta['termlambda']
-	print meta['termmu']
-	print meta['coeff_p']
+	# print meta['termlambda']
+	# print meta['termmu']
+	# print meta['coeff_p']
 
-	Kmax = 1000
 
 	p = 0.5 #initialize
-	for k in range(Kmax):
+	lmbd_prev = 0.5
+	mu_prev = 0.5
+	# count = 0
+	while 1:
 		lmbd = (meta['termlambda']['A'] - meta['coeff_p'][0]*p \
 				+meta['termlambda']['B'] + meta['termlambda']['C'] - meta['coeff_p'][1]*p)\
 				/(meta['termlambda']['D'] - meta['coeff_p'][0]*p \
@@ -191,10 +193,17 @@ def estimate_random_dynamic_with_arrival_recursive(GT):
 				/(meta['termmu']['X'] + meta['coeff_p'][0]*p \
 				+meta['termmu']['Y'] + meta['termmu']['Z'] + meta['coeff_p'][1]*p)
 
+		# count += 1
+		# print 'count',count,'mu',mu
 		print 'mu',mu
 		
+		if abs(lmbd-lmbd_prev)<1e-4 and abs(mu-mu_prev)<1e-4:
+			break
 
+		#updates
 		p = lmbd/(lmbd+mu)
+		lmbd_prev,mu_prev = lmbd,mu
+
 
 	print "\t Time taken: ",time.time() - st
 

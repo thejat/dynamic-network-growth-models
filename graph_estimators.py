@@ -2,7 +2,175 @@
 import numpy as np
 import pprint, time
 import networkx as nx
+# import community
+from graph_tool import Graph
+from graph_tool import collection
+from graph_tool import inference
+from matplotlib import pyplot
+from mpl_toolkits.mplot3d import Axes3D
 
+#Our Algorithm for the Fixed Group Model
+
+def networkx2graph_tool(G):
+	g = Graph()
+	gv = {}
+	ge = {}
+	for n in G.nodes():
+		gv[n] = g.add_vertex()
+	for e in G.edges():
+		ge[e] = g.add_edge(gv[e[0]],gv[e[1]])
+	return [g,gv,ge]
+
+def graph_tool_community(G,k):
+	gtg,gtgv,gtge = networkx2graph_tool(G)
+	gttemp = inference.minimize_blockmodel_dl(gtg,B_min=k,B_max=k)
+	labels= np.array(gttemp.b.get_array())
+	partition = {}
+	for e,x in enumerate(gtgv):
+		partition[x] = int(labels[e])+1
+	return partition
+
+def unify_communities_sets(ghats):
+	kappa = 1
+	gfinal = {}
+	countij = {}
+	for i in ghats[0].keys():
+		for j in range(1,i):
+			countij[(i,j)] = 0
+			for t in range(0,len(ghats)):
+				if ghats[t][i]==ghats[t][j]:
+					countij[(i,j)] += 1
+			if countij[(i,j)] > len(ghats)*0.5:
+				if gfinal.get(j,None) is not None and gfinal.get(i,None) is None:
+					gfinal[i] = gfinal[j]
+				if gfinal.get(i,None) is None and gfinal.get(j,None) is None:
+					gfinal[i] = kappa
+					gfinal[j] = kappa
+					kappa += 1
+	return gfinal
+
+
+def estimate_w_mle(G,r,s,debug=False):
+	rcount,scount,rscount = 0,0,0
+
+	for x in G.nodes(data=True):
+		if x[1]['group'][0]==r:
+			rcount += 1
+		if x[1]['group'][0]==s:
+			scount += 1
+		for y in G.nodes(data=True):
+			if (x[1]['group'][0] ==r and y[1]['group'][0]==s) or (x[1]['group'][0] ==s and y[1]['group'][0]==r):
+				if (x[0],y[0]) in G.edges() or (y[0],x[0]) in G.edges():
+					rscount += 1 #edge representations in networkx are directed
+
+	if debug:
+		print r,s,rcount,scount,rscount
+
+	if rcount==0 or scount==0:
+		return 0
+	else:
+		return rscount*1.0/(rcount*scount)
+
+
+def exhaustive_search_no_averaging(w_hats,r,s,debug=True):
+
+	def scoring(xivar,wvar,w_hats,r,s):
+		score = 0
+		for t in range(1,len(w_hats)+1):
+			score += abs(w_hats[t-1][r-1,s-1] - pow(xivar,t-1)*wvar + wvar*pow(1-xivar,t-1))
+		return score
+	grid_pts = np.linspace(0,1,41)
+	current_min = scoring(grid_pts[0],grid_pts[0],w_hats,r,s)
+	xiopt,wopt = 0,0
+	xvals,yvals,zvals = [],[],[]
+	for xivar in grid_pts:
+		for wvar in grid_pts:
+			candidate_score = scoring(xivar,wvar,w_hats,r,s)
+			if candidate_score <= current_min:
+				xiopt,wopt = xivar,wvar
+				current_min = candidate_score
+			if debug:
+				xvals.append(xivar)
+				yvals.append(wvar)
+				zvals.append(candidate_score)
+
+	if debug:
+
+		fig = pyplot.figure()
+		ax = Axes3D(fig)
+		ax.scatter(xvals,yvals,zvals)
+		ax.set_xlabel('xi')
+		ax.set_ylabel('w')
+		pyplot.show()
+
+	return xiopt,wopt
+
+
+
+def exhaustive_search_with_averaging(w_hats,r,s,debug=False):
+
+	def scoring(xivar,wvar,w_hats,r,s,t):
+		return abs(w_hats[t-1][r-1,s-1] - pow(xivar,t-1)*wvar + wvar*pow(1-xivar,t-1))
+
+	xiopt_array,wopt_array = [],[]
+	for t in range(1,len(w_hats)+1):
+
+		grid_pts = np.linspace(0,1,41)
+		current_min = scoring(grid_pts[0],grid_pts[0],w_hats,r,s,t)
+		xiopt,wopt = 0,0
+		xvals,yvals,zvals = [],[],[]
+		for xivar in grid_pts:
+			for wvar in grid_pts:
+				candidate_score = scoring(xivar,wvar,w_hats,r,s,t)
+				if candidate_score <= current_min:
+					xiopt,wopt = xivar,wvar
+					current_min = candidate_score
+		xiopt_array.append(xiopt)
+		wopt_array.append(wopt)
+
+	return np.mean(np.array(xiopt_array)),np.mean(np.array(wopt_array))
+
+
+def estimate_parameters_dynamic_graphs_fixed_grouping(GT,k=2):
+
+	#Estimate communities for individual snapshots
+	ghats = []
+	for G in GT:
+		#ghats.append(community.best_partition(G))
+		ghats.append(graph_tool_community(G,k))
+
+	#Aggregate/Unify
+	gfinal = unify_communities_sets(ghats)
+
+	#Estimate w_hat_t_r_s
+	w_hats = {}
+	for t,G in enumerate(GT):
+		w_hats[t] = np.zeros((k,k))
+		for r in range(1,k+1):
+			for s in range(1,k+1):
+				w_hats[t][r-1,s-1] = estimate_w_mle(G,r,s)
+
+
+	#recursion to relate w_hats_t to ws
+	wfinal = np.zeros((k,k))
+	for r in range(1,k+1):
+		for s in range(1,k+1):
+			# wfinal[r-1,s-1],xifinal = exhaustive_search_no_averaging(w_hats,r,s)
+			wfinal[r-1,s-1],xifinal = exhaustive_search_with_averaging(w_hats,r,s)
+
+
+
+	return ghats,gfinal,w_hats,wfinal,xifinal
+
+
+
+
+
+#Our Algorithm for the Fixed Group Model Ends
+
+
+
+#Zhang 2016 Model A
 
 def get_statistics(GT):
 
@@ -43,7 +211,6 @@ def get_statistics(GT):
 
 	return meta
 
-
 def estimate_random_dynamic_no_arrival_recursive(GT):
 
 	meta = get_statistics(GT)
@@ -60,7 +227,6 @@ def estimate_random_dynamic_no_arrival_recursive(GT):
 		pterm = n_nodes*(n_nodes-1)*.5*(alpha/(alpha+beta))
 
 	return alpha,beta
-
 
 def estimate_random_dynamic_no_arrival_gridsearch(GT):
 
@@ -86,7 +252,6 @@ def estimate_random_dynamic_no_arrival_gridsearch(GT):
 	print 'best beta',gridvals[maxidx[1]]
 
 	return gridvals[maxidx[0]],gridvals[maxidx[1]]
-
 
 def get_statistics_arrivals(GT):
 
@@ -165,7 +330,6 @@ def get_statistics_arrivals(GT):
 
 	return {'termlambda':termlambda,'termmu':termmu,'coeff_p':[coeff_nC2p,coeff_sumt_nptC2p]}
 
-
 def estimate_random_dynamic_with_arrival_recursive(GT):
 
 
@@ -208,3 +372,5 @@ def estimate_random_dynamic_with_arrival_recursive(GT):
 	print "\t Time taken: ",time.time() - st
 
 	return lmbd,mu
+
+#Zhang 2016 Model A Ends

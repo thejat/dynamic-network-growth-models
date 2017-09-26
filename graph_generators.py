@@ -33,22 +33,20 @@ def generate_synthetic_dynamic_graphs_fixed_grouping(xi=0.5,W=np.eye(2),n=10,k=2
 
 		print "\tGraph snapshot at snapshot",t, " time",time.time()-st
 
-		Gcurrent = GT[t-1].copy()
-		current_nodes = sorted(Gcurrent.nodes())
+		Gcurrent = nx.Graph()
+		for node in GT[t-1].nodes(data=True):
+			# print node
+			Gcurrent.add_node(node[0],group=node[1]['group'])
 
-		#remove all edges in Gcurrent
-		for j in current_nodes:
-			for i in current_nodes:
+		for i in Gcurrent.nodes():
+			for j in Gcurrent.nodes():
 				if i < j:
-					if (i,j) in Gcurrent.edges():
-						Gcurrent.remove_edge(i,j)
-
 					if np.random.rand() <= xi:
 						if (i,j) in GT[t-1].edges():
 							Gcurrent.add_edge(i,j)
 					else:
 						if np.random.rand() <= W[Gcurrent.node[i]['group']-1,Gcurrent.node[j]['group']-1]:
-							Goriginal.add_edge(i,j)
+							Gcurrent.add_edge(i,j)
 
 		GT.append(Gcurrent)
 
@@ -147,35 +145,3 @@ def illustrate_zhang_modelA():
 
 	print "True vals: lambda",lmbdTrue," mu",muTrue
 	print "Estimates: lambda",lmbd," mu ",mu
-
-
-if __name__=='__main__':
-	debug = False
-	k = 2
-	W = np.array([[.9,.1],[.1,0.9]])#np.random.rand(k,k)
-	GT = generate_synthetic_dynamic_graphs_fixed_grouping(xi=1,W=W,n=60,k=k,flag_draw=False,total_time=2)
-
-	ghats,gfinal,w_hats,wfinal,xifinal = estimate_parameters_dynamic_graphs_fixed_grouping(GT,k)
-
-	if debug:
-		print 'truth    ',{x[0]:x[1]['group'][0] for x  in GT[0].nodes(data=True)}	
-		print 'snapshot1',ghats[0]
-		print 'snapshot2',ghats[1]
-		print 'snapshot3',ghats[2]
-		print 'final    ',gfinal
-	print '\n w_hats',w_hats[0]
-	print 'wfinal', wfinal
-	print 'xifinal', xifinal
-
-	# G = GT[0]
-	# partition = ghats[0]
-	# size = float(len(set(partition.values())))
-	# pos = nx.spring_layout(G)
-	# col_vec = np.zeros(len(G.nodes()))
-	# for com in set(partition.values()) :
-	# 	list_nodes = [nodes for nodes in partition.keys() if partition[nodes] == com]
-	# 	print 'nodes:',list_nodes
-	# 	for k in list_nodes:
-	# 		col_vec[k-1] = com
-	# nx.draw(G, pos, with_labels = True,node_color = list(col_vec))
-	# plt.show()

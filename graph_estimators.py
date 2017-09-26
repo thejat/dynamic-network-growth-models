@@ -40,7 +40,7 @@ def unify_communities_sets(ghats):
 			for t in range(0,len(ghats)):
 				if ghats[t][i]==ghats[t][j]:
 					countij[(i,j)] += 1
-			if countij[(i,j)] > len(ghats)*0.5:
+			if countij[(i,j)] > len(ghats)*0.5:#BUG
 				if gfinal.get(j,None) is not None and gfinal.get(i,None) is None:
 					gfinal[i] = gfinal[j]
 				if gfinal.get(i,None) is None and gfinal.get(j,None) is None:
@@ -49,30 +49,33 @@ def unify_communities_sets(ghats):
 					kappa += 1
 	return gfinal
 
-
-def estimate_w_mle(G,r,s,debug=False):
+def estimate_w_mle(G,r,s,gfinal,debug=True):
 	rcount,scount,rscount = 0,0,0
 
-	for x in G.nodes(data=True):
-		if x[1]['group'][0]==r:
+	# if debug:
+	# 	print 'gfinal',gfinal
+
+	for x in G.nodes():
+		if gfinal[x]==r:
 			rcount += 1
-		if x[1]['group'][0]==s:
+		if gfinal[x]==s:
 			scount += 1
-		for y in G.nodes(data=True):
-			if (x[1]['group'][0] ==r and y[1]['group'][0]==s) or (x[1]['group'][0] ==s and y[1]['group'][0]==r):
-				if (x[0],y[0]) in G.edges() or (y[0],x[0]) in G.edges():
+
+	for x in G.nodes():
+		for y in G.nodes():
+			if (gfinal[x] ==r and gfinal[y]==s) or (gfinal[x] ==s and gfinal[y]==r):
+				if (x,y) in G.edges() or (y,x) in G.edges():
 					rscount += 1 #edge representations in networkx are directed
 
-	if debug:
-		print r,s,rcount,scount,rscount
+	# if debug:
+	# 	print r,s,rcount,scount,rscount
 
 	if rcount==0 or scount==0:
 		return 0
 	else:
 		return rscount*1.0/(rcount*scount)
 
-
-def exhaustive_search_no_averaging(w_hats,r,s,debug=True):
+def exhaustive_search_no_averaging(w_hats,r,s,debug=False):
 
 	def scoring(xivar,wvar,w_hats,r,s):
 		score = 0
@@ -105,8 +108,6 @@ def exhaustive_search_no_averaging(w_hats,r,s,debug=True):
 
 	return xiopt,wopt
 
-
-
 def exhaustive_search_with_averaging(w_hats,r,s,debug=False):
 
 	def scoring(xivar,wvar,w_hats,r,s,t):
@@ -130,17 +131,81 @@ def exhaustive_search_with_averaging(w_hats,r,s,debug=False):
 
 	return np.mean(np.array(xiopt_array)),np.mean(np.array(wopt_array))
 
+def xiw_model_estimate_w(w_hats,r,s,debug=False):
 
-def estimate_parameters_dynamic_graphs_fixed_grouping(GT,k=2):
+	wopt_array = np.zeros(len(w_hats))
+	for t in range(1,len(w_hats)+1):	
+		wopt_array[t-1]= w_hats[t-1][r-1,s-1]
+
+	return np.mean(wopt_array)
+
+def xiw_model_estimate_xi(wfinal,gfinal,GT,debug=True):
+
+	def scoring(xivar,wfinal,gfinal,GT):
+		score = 0
+		nodes = GT[0].nodes()
+		for t in range(2,len(GT)+1):
+			for i in nodes:
+				for j in nodes:
+					if i < j:
+						if (i,j) in GT[t-1].edges():
+							current_edge = 1
+						else:
+							current_edge = 0
+						if (i,j) in GT[t-2].edges():
+							previous_edge = 1
+						else:
+							previous_edge = 0
+						edge_copy = current_edge*previous_edge + (1-current_edge)*(1-previous_edge)
+						score += np.log(1e-20 + xivar*edge_copy + (1-xivar)*(current_edge*wfinal[gfinal[i]-1,gfinal[j]-1] \
+							+ (1-current_edge)*(1 - wfinal[gfinal[i]-1,gfinal[j]-1])))
+		return score
+
+	grid_pts = np.linspace(0,1,21)
+	current_max = scoring(grid_pts[0],wfinal,gfinal,GT)
+	xiopt=0
+	score_log = []
+	for xivar in grid_pts:
+		candidate_score = scoring(xivar,wfinal,gfinal,GT)
+		score_log.append(candidate_score)
+		if candidate_score >= current_max:
+			xiopt = xivar
+			current_max = candidate_score
+	if debug:
+		print 'score log: ',score_log
+	return xiopt
+
+def estimate_parameters_dynamic_graphs_fixed_grouping(GT,k=2,W=np.eye(2),debug=True):
+
+	ghats = []
+	w_hats = {}
+	for t in range(len(GT)):
+		ghats.append(None)
+		w_hats[t] = None
+	gfinal = None
+
+	wfinal = None
+	xifinal = 0
+
+	if debug:
+		t0 = time.time()
+		print 'Estimating groups, w, xi'
 
 	#Estimate communities for individual snapshots
-	ghats = []
-	for G in GT:
+	for i,G in enumerate(GT):
 		#ghats.append(community.best_partition(G))
-		ghats.append(graph_tool_community(G,k))
+		ghats[i] = graph_tool_community(G,k)
+
+	if debug:
+		for t in range(len(GT)):
+			print '\tsnapshot',t,ghats[t]
 
 	#Aggregate/Unify
 	gfinal = unify_communities_sets(ghats)
+	gtruth = {x[0]:x[1]['group'][0] for x  in GT[0].nodes(data=True)}
+	if debug:
+		print '\tgfinal    ',gfinal
+		print '\ttruth     ',gtruth
 
 	#Estimate w_hat_t_r_s
 	w_hats = {}
@@ -148,18 +213,28 @@ def estimate_parameters_dynamic_graphs_fixed_grouping(GT,k=2):
 		w_hats[t] = np.zeros((k,k))
 		for r in range(1,k+1):
 			for s in range(1,k+1):
-				w_hats[t][r-1,s-1] = estimate_w_mle(G,r,s)
+				w_hats[t][r-1,s-1] = estimate_w_mle(G,r,s,gfinal) # gtruth # gfinal
+	if debug:
+		for t in range(1,len(GT)+1):
+			print '\n w_hats',t,w_hats[t-1]
 
-
-	#recursion to relate w_hats_t to ws
+	#relate w_hats_t to ws
 	wfinal = np.zeros((k,k))
 	for r in range(1,k+1):
 		for s in range(1,k+1):
-			# wfinal[r-1,s-1],xifinal = exhaustive_search_no_averaging(w_hats,r,s)
-			wfinal[r-1,s-1],xifinal = exhaustive_search_with_averaging(w_hats,r,s)
+			wfinal[r-1,s-1] = xiw_model_estimate_w(w_hats,r,s)
+	if debug:
+		print '\twfinal', wfinal
 
+	#estimate xi exhausively
+	if debug:
+		print '\tEstimating xi start',time.time()-t0
+	xifinal = xiw_model_estimate_xi(wfinal,gfinal,GT) # wfinal # W
+	if debug:
+		print '\tEstimating xi end',time.time()-t0
+		print '\txifinal', xifinal
 
-
+		
 	return ghats,gfinal,w_hats,wfinal,xifinal
 
 

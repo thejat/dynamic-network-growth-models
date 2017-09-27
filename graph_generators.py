@@ -2,11 +2,10 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 np.random.seed(1000)
-from graph_estimators import estimate_random_dynamic_no_arrival_recursive,estimate_random_dynamic_with_arrival_recursive, estimate_parameters_dynamic_graphs_fixed_grouping
 import time
 
 
-def generate_synthetic_dynamic_graphs_fixed_grouping(xi=0.5,W=np.eye(2),n=10,k=2,flag_draw=False,total_time=2):
+def generate_fixed_group_lazy(xi=0.5,W=np.eye(2),n=10,k=2,flag_draw=False,total_time=2):
 
 	st = time.time()
 	print "Generating data"
@@ -58,7 +57,7 @@ def generate_synthetic_dynamic_graphs_fixed_grouping(xi=0.5,W=np.eye(2),n=10,k=2
 
 	return GT
 
-def generate_random_dynamic_graph_zhang_modelA(alpha=0.5,beta=0.6,n0=50,flag_draw=False,total_time=10,flag_arrivals=True):
+def generate_Zhang_modelA_modified(alpha=0.5,beta=0.6,n0=50,flag_draw=False,total_time=10,flag_arrivals=True):
 
 	st = time.time()
 	print "Generating data"
@@ -112,36 +111,3 @@ def generate_random_dynamic_graph_zhang_modelA(alpha=0.5,beta=0.6,n0=50,flag_dra
 	print "\tTime taken:",time.time() - st
 
 	return GT
-
-def illustrate_zhang_modelA():
-
-	# alphaTrue = 0.7
-	# betaTrue = 0.4
-
-	# st = time.time()
-	# GT = generate_random_dynamic_graphs(alpha=alphaTrue,beta=betaTrue,n0=20,flag_draw=False,total_time=1000,flag_arrivals=False)
-	# print "generated data, time taken:",time.time() - st
-
-	# st = time.time() 	
-	# alpha,beta = estimate_random_dynamic_no_arrival_recursive(GT)
-	# print "estimated from data, time taken: ",time.time() - st
-	# print "True vals: alpha",alphaTrue," beta",betaTrue
-	# print "Estimates: alpha",alpha," beta ",beta
-	
-	# st = time.time()
-	# alpha,beta = estimate_random_dynamic_no_arrival_gridsearch(GT)
-	# print "estimated from data, time taken: ",time.time() - st
-	# print "True vals: alpha",alphaTrue," beta",betaTrue
-	# print "Estimates: alpha",alpha," beta ",beta
-
-
-
-	lmbdTrue = 0.7
-	muTrue = 0.4
-
-	GT = generate_random_dynamic_graphs(alpha=lmbdTrue,beta=muTrue,n0=20,flag_draw=False,total_time=10,flag_arrivals=True)
-	
-	lmbd,mu = estimate_random_dynamic_with_arrival_recursive(GT)
-
-	print "True vals: lambda",lmbdTrue," mu",muTrue
-	print "Estimates: lambda",lmbd," mu ",mu

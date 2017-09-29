@@ -44,12 +44,12 @@ def run_experiment_Zhang_modelA_modified():
 def run_experiment_fixed_group_lazy():
 	debug = False
 	params = {}
-	params['n_mcruns'] 		=   1
+	params['n_mcruns'] 		=   10
 	params['total_time'] 	=   8
-	params['xitrue'] 		=  .7
-	params['Wtrue'] 		= np.array([[.9,.1],[.1,0.9]])#[[1,.0],[.0,1]])# #np.random.rand(k,k)
+	params['xitrue'] 		=   0
+	params['Wtrue'] 		= np.array([[.65,.1],[.1,0.5]])#[[1,.0],[.0,1]])# #np.random.rand(k,k)
 	params['k'] 			= params['Wtrue'].shape[0]
-	params['n'] 			=  40
+	params['n'] 			=  32
 	start_time = time.time()
 
 	def save_estimates(params):
@@ -61,7 +61,7 @@ def run_experiment_fixed_group_lazy():
 		t_xifinal = []
 		t_timing  = []
 		for t in range(2,params['total_time']+1):
-			print "  Estimating with number of snaps: ",t, " of", params['total_time'], " at time", time.time()-start_time
+			print "  Estimating with number of snaps: ",t, " of", params['total_time'], ": starting at time", time.time()-start_time
 			ghats,gfinal,w_hats,wfinal,xifinal,times = EstimatorFixedGroupLazy().estimate_params(GT[:t],params['k'],params['Wtrue'])
 			t_gfinal.append(gfinal)
 			t_wfinal.append(wfinal)
@@ -77,9 +77,9 @@ def run_experiment_fixed_group_lazy():
 		log[mcrun] = save_estimates(params)
 		print "  Run funish time:", time.time()-start_time
 
-	print 'Saving a log of the experiment'
-	pickle.dump({'log':log,'params':params},open('explog.pkl','wb'))
-	print 'Experiment end time:', time.time()-start_time
+		print 'Saving a log of the experiment. This will be overwritten.'
+		pickle.dump({'log':log,'params':params},open('explog.pkl','wb'))
+		print 'Experiment end time:', time.time()-start_time
 
 def run_experiment_fixed_group_bernoulli():
 	print "TBD"

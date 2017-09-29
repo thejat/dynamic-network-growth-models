@@ -4,7 +4,8 @@ import time
 import networkx as nx
 # import community
 from graph_tool import Graph, collection, inference
-
+import pulp #tbd: gurobipy/cplex
+np.random.seed(1000)
 
 #Common Functions
 class EstimatorUtility(object):
@@ -31,7 +32,78 @@ class EstimatorUtility(object):
 #Proposed Estimator for the Fixed Group Lazy Model 
 class EstimatorFixedGroupLazy(object):
 
-	def unify_communities_sets(self,ghats):
+
+	def get_permutation_from_LP(self,Q1,Qt):
+
+		coeff = np.dot(np.transpose(Q1),Qt)
+		
+		tau = {}
+		for i in range(Q1.shape[1]):
+			for j in range(Q1.shape[1]):
+				tau[(i,j)] = pulp.LpVariable("tau"+str(i)+str(j), 0, 1)
+
+		lp_prob = pulp.LpProblem("Unify LP", pulp.LpMaximize)
+
+		dot_cx = tau[(0,0)]*0
+		for i in range(Q1.shape[1]):
+			for j in range(Q1.shape[1]):
+				dot_cx += tau[(i,j)]*coeff[i,j]
+		lp_prob += dot_cx
+
+
+		for i in range(Q1.shape[1]):
+			constr = tau[(0,0)]*0
+			for j in range(Q1.shape[1]):
+				constr += tau[(i,j)]
+			lp_prob += constr == 1
+
+		for j in range(Q1.shape[1]):
+			constr = tau[(0,0)]*0
+			for i in range(Q1.shape[1]):
+				constr += tau[(i,j)]
+			lp_prob += constr == 1
+
+		# lp_prob.writeLP('temp.lp')
+		lp_prob.solve()
+
+		tau = []
+		for v in lp_prob.variables():
+			# print "\t",v.name, "=", v.varValue
+			tau.append(v.varValue)
+		# print "\t Obj =", pulp.value(lp_prob.objective)
+		return np.array(tau).reshape((Q1.shape[1],Q1.shape[1]))
+
+	def unify_communities_LP(self,ghats,k):
+
+		#Find permutation matrices tau's
+		Qs = {}
+		for j in ghats:#0,1.,...,T
+			Qs[j] = np.zeros((len(ghats[0]),k))
+			for i in range(1,len(ghats[0])+1): #every node index from 1 to n
+				Qs[j][i-1,ghats[j][i]-1] = 1
+
+		taus = {}
+		for j in range(1,len(ghats)):#ghats except the first one
+			taus[j] = self.get_permutation_from_LP(Qs[0],Qs[j])
+
+		#apply them on Qt's to get unpermuted group memberships
+		gfinal = {}
+		for i in range(1,len(ghats[0])+1):#for each node from 1 to n
+			evec = np.zeros(len(ghats[0]))
+			evec[i-1] = 1
+			counts = np.dot(evec.transpose(),Qs[0])
+			for l in range(1,len(ghats)):#for evert time index
+				# print 'l',l,' eTQtau', np.dot(evec.transpose(),np.dot(Qs[l],np.linalg.inv(taus[l])))
+				counts += np.dot(evec.transpose(),np.dot(Qs[l],np.linalg.inv(taus[l])))
+			# print 'i',i,' counts',counts
+			gfinal[i] = np.argmax(counts)+1
+
+
+		return gfinal#, taus, Qs
+
+
+
+	def unify_communities_sets(self,ghats,k):
 		kappa = 1
 		gfinal = {}
 		countij = {}
@@ -82,6 +154,7 @@ class EstimatorFixedGroupLazy(object):
 		for t in range(1,len(w_hats)+1):	
 			wopt_array[t-1]= w_hats[t-1][r-1,s-1]
 
+		print wopt_array,np.mean(wopt_array),np.median(wopt_array)
 		return np.mean(wopt_array)
 
 	def xiw_model_estimate_xi(self,wfinal,gfinal,GT,debug=False):
@@ -122,8 +195,8 @@ class EstimatorFixedGroupLazy(object):
 
 	def estimate_params(self,GT,k=2,W=np.eye(2),debug=False):
 
-		flag_estimate_g  = False
-		flag_estimate_w  = False
+		flag_estimate_g  = False # False
+		flag_estimate_w  = True # False
 
 		ghats = []
 		w_hats = {}
@@ -151,7 +224,8 @@ class EstimatorFixedGroupLazy(object):
 
 
 			#Aggregate/Unify
-			gfinal = self.unify_communities_sets(ghats)
+			# gfinal = self.unify_communities_sets(ghats,k)
+			gfinal = self.unify_communities_LP(ghats,k)
 
 		time1 = time.time()-time0
 		if debug:
@@ -459,3 +533,30 @@ class EstimatorZhangAModified(object):
 		print "\t Time taken: ",time.time() - st
 
 		return lmbd,mu
+
+
+
+
+if __name__=='__main__':
+
+	n = 10
+	negerr = 1
+	grps = [1,2,3]
+	tau1 = np.array([[0,1,0],[0,0,1],[1,0,0]])
+	tau2 = np.array([[0,0,1],[1,0,0],[0,1,0]])
+	ghats = {}
+	ghats[0] = {}
+	for i in range(1,n+1):
+		ghats[0][i] = np.random.choice(grps,1)[0]
+		# print i,np.argmax(tautrue[ghats[0][i]-1,])
+	ghats[1], ghats[2] = {},{}
+	for i in range(1,n+1):
+		if np.random.rand() < negerr:
+			ghats[1][i] = np.argmax(tau1[ghats[0][i]-1,])+1
+		else:
+			ghats[1][i] = 1
+		if np.random.rand() < negerr:
+			ghats[2][i] = np.argmax(tau2[ghats[0][i]-1,])+1
+		else:
+			ghats[2][i] = 2
+	gfinal = EstimatorFixedGroupLazy().unify_communities_LP(ghats,len(grps)) #,taus,Qs

@@ -140,10 +140,13 @@ class EstimatorFixedGroupLazy(object):
 					if (x,y) in G.edges() or (y,x) in G.edges():
 						rscount += 1 #edge representations in networkx are directed
 
+		if r==s:
+			scount = scount - 1 # in this case the mle is 2*number fo edges/((no of nodes)(no of nodes - 1))
+
 		# if debug:
 		# 	print r,s,rcount,scount,rscount
 
-		if rcount==0 or scount==0:
+		if rcount<=0 or scount<=0:
 			return 0
 		else:
 			return rscount*1.0/(rcount*scount)
@@ -153,8 +156,8 @@ class EstimatorFixedGroupLazy(object):
 		wopt_array = np.zeros(len(w_hats))
 		for t in range(1,len(w_hats)+1):	
 			wopt_array[t-1]= w_hats[t-1][r-1,s-1]
-
-		print wopt_array,np.mean(wopt_array),np.median(wopt_array)
+		if debug:
+			print wopt_array,np.mean(wopt_array),np.median(wopt_array)
 		return np.mean(wopt_array)
 
 	def xiw_model_estimate_xi(self,wfinal,gfinal,GT,debug=False):

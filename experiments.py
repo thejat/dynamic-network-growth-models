@@ -44,12 +44,12 @@ def run_experiment_Zhang_modelA_modified():
 def run_experiment_fixed_group_lazy():
 	debug = False
 	params = {}
-	params['n_mcruns'] 		=   10
-	params['total_time'] 	=   8
+	params['n_mcruns'] 		=   5
+	params['total_time'] 	=   16
 	params['xitrue'] 		=   0
 	params['Wtrue'] 		= np.array([[.65,.1],[.1,0.5]])#[[1,.0],[.0,1]])# #np.random.rand(k,k)
 	params['k'] 			= params['Wtrue'].shape[0]
-	params['n'] 			=  32
+	params['n'] 			=  20
 	start_time = time.time()
 
 	def save_estimates(params):
@@ -73,7 +73,7 @@ def run_experiment_fixed_group_lazy():
 
 	log = {}
 	for mcrun in range(params['n_mcruns']):
-		print "Estimation Monte Carlo Run # ",mcrun, " of ",params['n_mcruns']
+		print "Estimation Monte Carlo Run # ",mcrun+1, " of ",params['n_mcruns']
 		log[mcrun] = save_estimates(params)
 		print "  Run funish time:", time.time()-start_time
 

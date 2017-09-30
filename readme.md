@@ -1,4 +1,4 @@
-### Code for the paper "New Algorithms for Inference in Dynamic Stochastic Block Models" (2017)
+### Code for the paper "New Algorithms for Inference in Graph Sequence Models" (2017)
 
 This codebase is for algorithms proposed in the aforementioned [paper](https://theja.org/#). It consists of the following python scripts:
 

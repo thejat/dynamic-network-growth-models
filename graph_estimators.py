@@ -17,7 +17,7 @@ class EstimatorUtility(object):
 		for n in G.nodes():
 			gv[n] = g.add_vertex()
 		for e in G.edges():
-			ge[e] = g.add_edge(gv[e[0]],gv[e[1]])
+			ge[e] = g.add_edge(gv[e[0]],gv[e[1]])#connects two ends of the edges
 		return [g,gv,ge]
 
 	def graph_tool_community(self,G,k):
@@ -25,8 +25,8 @@ class EstimatorUtility(object):
 		gttemp = inference.minimize_blockmodel_dl(gtg,B_min=k,B_max=k)
 		labels= np.array(gttemp.b.get_array())
 		partition = {}
-		for e,x in enumerate(gtgv):
-			partition[x] = int(labels[e])+1
+		for e,x in enumerate(gtgv):#Why for e and x?
+			partition[x] = int(labels[e])+1 #Gives the # of nodes in each community?
 		return partition
 
 #Proposed Estimator for the Fixed Group Lazy Model 
@@ -39,7 +39,7 @@ class EstimatorFixedGroupLazy(object):
 		
 		tau = {}
 		for i in range(Q1.shape[1]):
-			for j in range(Q1.shape[1]):
+			for j in range(Q1.shape[1]):# Why both Q1.shape with the [1]?
 				tau[(i,j)] = pulp.LpVariable("tau"+str(i)+str(j), 0, 1)
 
 		lp_prob = pulp.LpProblem("Unify LP", pulp.LpMaximize)
@@ -273,9 +273,230 @@ class EstimatorFixedGroupLazy(object):
 			
 		return ghats,gfinal,w_hats,wfinal,xifinal,[time1,time2,time3]
 
-#Proposed Estimator for the Fixed Group Bernoulli Model 
+#Proposed Estimator for the Fixed Group Bernoulli Model ????
 class EstimatorFixedGroupBernoulli(object):
+	def get_permutation_from_LP(self, Q1, Qt):
 
+		coeff = np.dot(np.transpose(Q1), Qt)
+
+		tau = {}
+		for i in range(Q1.shape[1]):
+			for j in range(Q1.shape[1]):  # Why both Q1.shape with the [1]?
+				tau[(i, j)] = pulp.LpVariable("tau" + str(i) + str(j), 0, 1)
+
+		lp_prob = pulp.LpProblem("Unify LP", pulp.LpMaximize)
+
+		dot_cx = tau[(0, 0)] * 0
+		for i in range(Q1.shape[1]):
+			for j in range(Q1.shape[1]):
+				dot_cx += tau[(i, j)] * coeff[i, j]
+		lp_prob += dot_cx
+
+		for i in range(Q1.shape[1]):
+			constr = tau[(0, 0)] * 0
+			for j in range(Q1.shape[1]):
+				constr += tau[(i, j)]
+			lp_prob += constr == 1
+
+		for j in range(Q1.shape[1]):
+			constr = tau[(0, 0)] * 0
+			for i in range(Q1.shape[1]):
+				constr += tau[(i, j)]
+			lp_prob += constr == 1
+
+		# lp_prob.writeLP('temp.lp')
+		lp_prob.solve()
+
+		tau = []
+		for v in lp_prob.variables():
+			# print "\t",v.name, "=", v.varValue
+			tau.append(v.varValue)
+		# print "\t Obj =", pulp.value(lp_prob.objective)
+		return np.array(tau).reshape((Q1.shape[1], Q1.shape[1]))
+
+	def unify_communities_LP(self, ghats, k):
+
+		# Find permutation matrices tau's
+		Qs = {}
+		for j in ghats:  # 0,1.,...,T
+			Qs[j] = np.zeros((len(ghats[0]), k))
+			for i in range(1, len(ghats[0]) + 1):  # every node index from 1 to n
+				Qs[j][i - 1, ghats[j][i] - 1] = 1
+
+		taus = {}
+		for j in range(1, len(ghats)):  # ghats except the first one
+			taus[j] = self.get_permutation_from_LP(Qs[0], Qs[j])
+
+		# apply them on Qt's to get unpermuted group memberships
+		gfinal = {}
+		for i in range(1, len(ghats[0]) + 1):  # for each node from 1 to n
+			evec = np.zeros(len(ghats[0]))
+			evec[i - 1] = 1
+			counts = np.dot(evec.transpose(), Qs[0])
+			for l in range(1, len(ghats)):  # for evert time index
+				# print 'l',l,' eTQtau', np.dot(evec.transpose(),np.dot(Qs[l],np.linalg.inv(taus[l])))
+				counts += np.dot(evec.transpose(), np.dot(Qs[l], np.linalg.inv(taus[l])))
+			# print 'i',i,' counts',counts
+			gfinal[i] = np.argmax(counts) + 1
+
+		return gfinal  # , taus, Qs
+
+
+	def estimate_w_mle(self, GT, r, s, gfinal, debug=True):
+		rcount, scount, rscount, wmle = 0, 0, 0, 0
+
+		wmle=[]
+		# if debug:
+		# 	print 'gfinal',gfinal
+		for t in range(2, len(GT) + 1):
+			for x in GT.nodes():
+				if gfinal[x] == r:
+					rcount += 1
+				if gfinal[x] == s:
+					scount += 1
+
+		for x in GT.nodes():
+			for y in GT.nodes():
+				if (gfinal[x] == r and gfinal[y] == s) or (gfinal[x] == s and gfinal[y] == r):
+					if (x, y) in GT.edges() or (y, x) in GT.edges():
+						rscount += 1  # edge representations in networkx are directed
+
+		if r == s:
+			scount = scount - 1  # in this case the mle is 2*number fo edges/((no of nodes)(no of nodes - 1))
+		wmlet = rscount * 1.0 / (rcount * scount)
+		wmle.append(wmlet)
+		# if debug:
+		# 	print r,s,rcount,scount,rscount
+
+		if rcount <= 0 or scount <= 0:
+			return 0
+		else:
+			return wmle
+
+
+	def muw_model_estimate_muw(self, r, s, GT, debug=False):
+
+		def scoring(muvar, wvar, gfinal, GT):
+			score = 0
+			score_array=[]
+			wmle=self.estimate_w_mle(G, r, s, gfinal, debug=True)
+			nodes = GT[0].nodes()
+			for t in range(2, len(GT) + 1):
+				score = (((1- muvar[r - 1, s - 1]*(1-wvar[r - 1, s - 1]))^(t-1)\
+				* wvar[r - 1, s - 1]+ muvar[r - 1, s - 1] \
+				* wvar[r - 1, s - 1]* (1-(1-muvar[r - 1, s - 1](1+wvar[r - 1, s - 1]))^(t-1))\
+				/muvar[r - 1, s - 1](1+wvar[r - 1, s - 1])-wmle[t-1]))^2
+				score_array.append(score)
+			return score_array
+
+
+		grid_pts = np.linspace(0, 1, 41)
+		muopt_array = []
+		wopt_array = []
+		score_log = []
+		for t in range(2, len(GT) + 1):
+			current_min = scoring(grid_pts[0], grid_pts[0], GT)[t-1]
+			muopt=0
+			wopt=0
+			for muvar in grid_pts:
+				for wvar in grid_pts:
+					candidate_score = scoring(muvar, wvar, GT)[t-1]
+					score_log.append(candidate_score)
+					if candidate_score >= current_min:
+						muopt = muvar
+						wopt = wvar
+						current_min = candidate_score
+			muopt_array.append(muopt)
+			wopt_array.append(wopt)
+
+			if debug:
+				print 'score log: ', score_log
+			return np.mean(muopt_array),np.mean(wopt_array)
+
+
+
+	def estimate_params(self,GT,k=2,W=np.eye(2),debug=False):
+
+		flag_estimate_g  = False # False
+		flag_estimate_w  = True # False
+
+		ghats = []
+		w_hats = {}
+		for t in range(len(GT)):
+			ghats.append(None)
+			w_hats[t] = None
+		gfinal = None
+
+		wfinal = None
+		xifinal = 0
+		time0 = time.time()
+
+		if debug:
+			print 'Estimating groups, w, xi. Timing starts here.'
+
+
+		gtruth = {x[0]:x[1]['group'][0] for x  in GT[0].nodes(data=True)}
+		if flag_estimate_g == False:
+			gfinal = gtruth
+		else:
+			#Estimate communities for individual snapshots
+			for i,G in enumerate(GT):
+				#ghats.append(community.best_partition(G))
+				ghats[i] = EstimatorUtility().graph_tool_community(G,k)
+
+
+			#Aggregate/Unify
+			# gfinal = self.unify_communities_sets(ghats,k)
+			gfinal = self.unify_communities_LP(ghats,k)
+
+		time1 = time.time()-time0
+		if debug:
+			for t in range(len(GT)):
+				print '\tsnapshot',t,ghats[t]
+			print '\tgfinal    ',gfinal
+			print '\ttruth     ',gtruth
+
+
+		if flag_estimate_w==False:
+			wfinal = W
+		else:
+			#Estimate w_hat_t_r_s
+			w_hats = {}
+			for t,G in enumerate(GT):
+				w_hats[t] = np.zeros((k,k))
+				for r in range(1,k+1):
+					for s in range(1,k+1):
+						w_hats[t][r-1,s-1] = self.estimate_w_mle(G,r,s,gfinal) # gtruth # gfinal
+
+			#relate w_hats_t to ws
+			wfinal = np.zeros((k,k))
+			for r in range(1,k+1):
+				for s in range(1,k+1):
+					wfinal[r-1,s-1] = self.xiw_model_estimate_w(w_hats,r,s)
+
+		time2 = time.time()- time0
+		if debug:
+			for t in range(1,len(GT)+1):
+				print '\n\t w_hats',t,w_hats[t-1]
+			print '\twfinal', wfinal
+
+		#estimate xi exhausively
+		if debug:
+			print '\tEstimating xi start at time',time2
+		xifinal = self.xiw_model_estimate_xi(wfinal,gfinal,GT) # wfinal # W
+		time3 = time.time()-time0
+		if debug:
+			print '\tEstimating xi end at time',time3
+			print '\txifinal', xifinal
+
+			
+		return ghats,gfinal,w_hats,wfinal,xifinal,[time1,time2,time3]
+
+
+
+
+
+####################################
 	def exhaustive_search_no_averaging(w_hats,r,s,debug=False):
 
 		def scoring(xivar,wvar,w_hats,r,s):

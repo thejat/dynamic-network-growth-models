@@ -3,19 +3,23 @@ import pickle,pprint
 
 if __name__=='__main__':
 
-	rawdata = pickle.load(open('explog.pkl','rb'))
+	# rawdata = pickle.load(open('explog.pkl','rb'))
+	rawdata = pickle.load(open('explog_bernoulli.pkl','rb'))
 	log= rawdata['log']
 	params = rawdata['params']
 
 	ts_meanw = [np.zeros((params['k'],params['k'])) for t in range(params['total_time']-1)]
+	ts_meanmu = [np.zeros((params['k'],params['k'])) for t in range(params['total_time']-1)]
 	for t in range(params['total_time']-1):
 		for mcrun in range(params['n_mcruns']):
 			ts_meanw[t] += log[mcrun]['wfinals'][t]
+			ts_meanmu[t] += log[mcrun]['mufinals'][t]
 
-	for t in range(params['total_time']-1):
 		ts_meanw[t] = ts_meanw[t]*1.0/params['n_mcruns']
+		ts_meanmu[t] = ts_meanmu[t]*1.0/params['n_mcruns']
 
 	pprint.pprint(ts_meanw)
+	pprint.pprint(ts_meanmu)
 
 	debug= False
 	if debug:

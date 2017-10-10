@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 np.random.seed(1000)
-from graph_generators import generate_Zhang_modelA_modified, generate_fixed_group_lazy
+from graph_generators import generate_Zhang_modelA_modified, generate_fixed_group_lazy, generate_fixed_group_bernoulli
 from graph_estimators import EstimatorZhangAModified, EstimatorFixedGroupLazy, EstimatorFixedGroupBernoulli
 import time, pickle
 
@@ -82,8 +82,44 @@ def run_experiment_fixed_group_lazy():
 		print 'Experiment end time:', time.time()-start_time
 
 def run_experiment_fixed_group_bernoulli():
-	print "TBD"
-	return NotImplementedError
+	debug = False
+	params = {}
+	params['n_mcruns'] 		=   1
+	params['total_time'] 	=  12
+	params['Mutrue'] 		=  np.array([[.5,.5],[.2,.6]])
+	params['Wtrue'] 		= np.array([[.7,.1],[.1,.7]])#[[1,.0],[.0,1]])# #np.random.rand(k,k)
+	params['k'] 			= params['Wtrue'].shape[0]
+	params['n'] 			=  30
+	start_time = time.time()
+
+	def save_estimates(params):
+		GT = generate_fixed_group_bernoulli(Mu = params['Mutrue'], W=params['Wtrue'], n=params['n'],k=params['k'],
+		   					flag_draw=False, total_time = params['total_time'])
+		t_t 	  = []
+		t_gfinal  = []
+		t_wfinal  = []
+		t_mufinal = []
+		t_timing  = []
+		for t in range(2,params['total_time']+1):
+			print "  Estimating with number of snaps: ",t, " of", params['total_time'], ": starting at time", time.time()-start_time
+			ghats,gfinal,w_hats,wfinal,mufinal,times = EstimatorFixedGroupBernoulli().estimate_params(GT[:t],params['k'],params['Wtrue'],params['Mutrue'])
+			t_gfinal.append(gfinal)
+			t_wfinal.append(wfinal)
+			t_mufinal.append(mufinal)
+			t_t.append(t)
+			t_timing.append(times)
+		return {'graphs':GT,'gfinals':t_gfinal,'mufinals':t_mufinal,'n_snapshots':t_t,'wfinals':t_wfinal,'comptime':t_timing}
+
+
+	log = {}
+	for mcrun in range(params['n_mcruns']):
+		print "Estimation Monte Carlo Run # ",mcrun+1, " of ",params['n_mcruns']
+		log[mcrun] = save_estimates(params)
+		print "  Run funish time:", time.time()-start_time
+
+		print 'Saving a log of the experiment. This will be overwritten.'
+		pickle.dump({'log':log,'params':params},open('explog_bernoulli.pkl','wb'))
+		print 'Experiment end time:', time.time()-start_time
 
 if __name__=='__main__':
 
@@ -91,7 +127,7 @@ if __name__=='__main__':
 	# run_experiment_Zhang_modelA_modified()
 
 	#Fixed Group Lazy
-	run_experiment_fixed_group_lazy()
+	# run_experiment_fixed_group_lazy()
 
 	#Fixed group Bernoulli
-	# run_experiment_fixed_group_bernoulli()
+	run_experiment_fixed_group_bernoulli()

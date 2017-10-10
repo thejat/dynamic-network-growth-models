@@ -5,7 +5,7 @@ np.random.seed(1000)
 import time
 
 
-def generate_fixed_group_bernoulli(mu = np.eye(2), W=np.matrix([[0.1, 0.2], [0.2, 0.1]]), n = 10, k = 2, flag_draw = True, total_time = 2):
+def generate_fixed_group_bernoulli(Mu = np.eye(2), W=np.matrix([[0.1, 0.2], [0.2, 0.1]]), n = 10, k = 2, flag_draw = True, total_time = 2):
     st = time.time()
     print 'Generating data'
     Goriginal = nx.Graph()
@@ -31,10 +31,10 @@ def generate_fixed_group_bernoulli(mu = np.eye(2), W=np.matrix([[0.1, 0.2], [0.2
             for j in Gcurrent.nodes():
                 if i < j:
                     if (i, j) in GT[t - 1].edges():
-                        if np.random.rand() > mu[Gcurrent.node[i]['group'] - 1, Gcurrent.node[j]['group'] - 1]:
+                        if np.random.rand() > Mu[Gcurrent.node[i]['group'] - 1, Gcurrent.node[j]['group'] - 1]:
                             Gcurrent.add_edge(i, j)
                     else:
-                        if np.random.rand() <= (W[Gcurrent.node[i]['group'] - 1, Gcurrent.node[j]['group'] - 1])*(mu[Gcurrent.node[i]['group'] - 1, Gcurrent.node[j]['group'] - 1]):
+                        if np.random.rand() <= (W[Gcurrent.node[i]['group'] - 1, Gcurrent.node[j]['group'] - 1])*(Mu[Gcurrent.node[i]['group'] - 1, Gcurrent.node[j]['group'] - 1]):
                              Gcurrent.add_edge(i, j)
 
         GT.append(Gcurrent)

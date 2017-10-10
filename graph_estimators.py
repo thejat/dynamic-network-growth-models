@@ -1,6 +1,6 @@
 #graph parameter estimation
 import numpy as np
-import time
+import time,pprint
 import networkx as nx
 # import community
 from graph_tool import Graph, collection, inference
@@ -341,84 +341,73 @@ class EstimatorFixedGroupBernoulli(object):
 
 		return gfinal  # , taus, Qs
 
+	def estimate_w_mle(self,G,r,s,gfinal,debug=True):
+			rcount,scount,rscount = 0,0,0
 
-	def estimate_w_mle(self, GT, r, s, gfinal, debug=True):
-		rcount, scount, rscount, wmle = 0, 0, 0, 0
+			# if debug:
+			# 	print 'gfinal',gfinal
 
-		wmle=[]
-		# if debug:
-		# 	print 'gfinal',gfinal
-		for t in range(2, len(GT) + 1):
-			for x in GT.nodes():
-				if gfinal[x] == r:
+			for x in G.nodes():
+				if gfinal[x]==r:
 					rcount += 1
-				if gfinal[x] == s:
+				if gfinal[x]==s:
 					scount += 1
 
-		for x in GT.nodes():
-			for y in GT.nodes():
-				if (gfinal[x] == r and gfinal[y] == s) or (gfinal[x] == s and gfinal[y] == r):
-					if (x, y) in GT.edges() or (y, x) in GT.edges():
-						rscount += 1  # edge representations in networkx are directed
+			for x in G.nodes():
+				for y in G.nodes():
+					if (gfinal[x] ==r and gfinal[y]==s) or (gfinal[x] ==s and gfinal[y]==r):
+						if (x,y) in G.edges() or (y,x) in G.edges():
+							rscount += 1 #edge representations in networkx are directed
 
-		if r == s:
-			scount = scount - 1  # in this case the mle is 2*number fo edges/((no of nodes)(no of nodes - 1))
-		wmlet = rscount * 1.0 / (rcount * scount)
-		wmle.append(wmlet)
-		# if debug:
-		# 	print r,s,rcount,scount,rscount
+			if r==s:
+				scount = scount - 1 # in this case the mle is 2*number fo edges/((no of nodes)(no of nodes - 1))
 
-		if rcount <= 0 or scount <= 0:
-			return 0
-		else:
-			return wmle
+			# if debug:
+			# 	print r,s,rcount,scount,rscount
+
+			if rcount<=0 or scount<=0:
+				return 0
+			else:
+				return rscount*1.0/(rcount*scount)
 
 
-	def muw_model_estimate_muw(self, r, s, GT, debug=False):
+	def muw_model_estimate_muw(self, whats, r, s, gfinal,GT, debug=False):
 
-		def scoring(muvar, wvar, gfinal, GT):
-			score = 0
-			score_array=[]
-			wmle=self.estimate_w_mle(G, r, s, gfinal, debug=True)
-			nodes = GT[0].nodes()
-			for t in range(2, len(GT) + 1):
-				score = (((1- muvar[r - 1, s - 1]*(1-wvar[r - 1, s - 1]))^(t-1)\
-				* wvar[r - 1, s - 1]+ muvar[r - 1, s - 1] \
-				* wvar[r - 1, s - 1]* (1-(1-muvar[r - 1, s - 1](1+wvar[r - 1, s - 1]))^(t-1))\
-				/muvar[r - 1, s - 1](1+wvar[r - 1, s - 1])-wmle[t-1]))^2
-				score_array.append(score)
-			return score_array
-
+		def scoring(muvar, wvar, whats,r,s,gfinal, GT,t):
+			return np.power((np.power(1- muvar*(1+wvar),(t-1))*wvar \
+				+ wvar*(1-np.power(1-muvar*(1+wvar),(t-1)))/(1+wvar) \
+				- whats[t][r-1,s-1]),2)
 
 		grid_pts = np.linspace(0, 1, 41)
 		muopt_array = []
 		wopt_array = []
-		score_log = []
-		for t in range(2, len(GT) + 1):
-			current_min = scoring(grid_pts[0], grid_pts[0], GT)[t-1]
-			muopt=0
-			wopt=0
-			for muvar in grid_pts:
-				for wvar in grid_pts:
-					candidate_score = scoring(muvar, wvar, GT)[t-1]
-					score_log.append(candidate_score)
-					if candidate_score >= current_min:
+		score_log = np.zeros((len(grid_pts),len(grid_pts)))
+		print 'lenGT',len(GT)
+		for t in range(1, len(GT)):
+			current_min = 1e8 #Potential bug
+			muopt,wopt = grid_pts[0], grid_pts[0]
+			for i,muvar in enumerate(grid_pts):
+				for j,wvar in enumerate(grid_pts):
+					candidate_score = scoring(muvar, wvar,whats,r,s,gfinal,GT,t)
+					score_log[i,j] = candidate_score
+					if np.isnan(candidate_score):
+						continue
+					if candidate_score <= current_min:
 						muopt = muvar
 						wopt = wvar
 						current_min = candidate_score
 			muopt_array.append(muopt)
 			wopt_array.append(wopt)
 
-			if debug:
-				print 'score log: ', score_log
-			return np.mean(muopt_array),np.mean(wopt_array)
+			# if debug:
+			# 	print 'score log: (',r,s,')'
+			# 	pprint.pprint(score_log)
+		return np.mean(muopt_array),np.mean(wopt_array)
 
-
-
-	def estimate_params(self,GT,k=2,W=np.eye(2),debug=False):
+	def estimate_params(self,GT,k=2,W=np.eye(2),Mu=np.eye(2),debug=True):
 
 		flag_estimate_g  = False # False
-		flag_estimate_w  = True # False
+		flag_estimate_w_and_mu  = True # False
 
 		ghats = []
 		w_hats = {}
@@ -426,13 +415,12 @@ class EstimatorFixedGroupBernoulli(object):
 			ghats.append(None)
 			w_hats[t] = None
 		gfinal = None
-
 		wfinal = None
-		xifinal = 0
+		mufinal = None
 		time0 = time.time()
 
 		if debug:
-			print 'Estimating groups, w, xi. Timing starts here.'
+			print 'Estimating groups, w, mu. Timing starts here.'
 
 
 		gtruth = {x[0]:x[1]['group'][0] for x  in GT[0].nodes(data=True)}
@@ -457,9 +445,11 @@ class EstimatorFixedGroupBernoulli(object):
 			print '\ttruth     ',gtruth
 
 
-		if flag_estimate_w==False:
+		if flag_estimate_w_and_mu==False:
 			wfinal = W
+			mufinal = Mu
 		else:
+
 			#Estimate w_hat_t_r_s
 			w_hats = {}
 			for t,G in enumerate(GT):
@@ -468,32 +458,29 @@ class EstimatorFixedGroupBernoulli(object):
 					for s in range(1,k+1):
 						w_hats[t][r-1,s-1] = self.estimate_w_mle(G,r,s,gfinal) # gtruth # gfinal
 
-			#relate w_hats_t to ws
+			time2 = time.time()- time0
+			if debug:
+				for t in range(1,len(GT)+1):
+					print '\n\t w_hats',t,w_hats[t-1]
+
+
+			#Estimate wfinal and mufinal
+			if debug:
+				print '\tEstimating w and mu starts at time',time2
 			wfinal = np.zeros((k,k))
+			mufinal = np.zeros((k,k))
 			for r in range(1,k+1):
 				for s in range(1,k+1):
-					wfinal[r-1,s-1] = self.xiw_model_estimate_w(w_hats,r,s)
+					mufinal[r-1,s-1],wfinal[r-1,s-1] = self.muw_model_estimate_muw(w_hats,r,s,gfinal,GT,debug=False)
 
-		time2 = time.time()- time0
-		if debug:
-			for t in range(1,len(GT)+1):
-				print '\n\t w_hats',t,w_hats[t-1]
-			print '\twfinal', wfinal
-
-		#estimate xi exhausively
-		if debug:
-			print '\tEstimating xi start at time',time2
-		xifinal = self.xiw_model_estimate_xi(wfinal,gfinal,GT) # wfinal # W
-		time3 = time.time()-time0
-		if debug:
-			print '\tEstimating xi end at time',time3
-			print '\txifinal', xifinal
+			time3 = time.time()-time0
+			if debug:
+				print '\tEstimating w and mu ends at time',time3
+				print '\tmufinal', mufinal
+				print '\twfinal', wfinal
 
 			
-		return ghats,gfinal,w_hats,wfinal,xifinal,[time1,time2,time3]
-
-
-
+		return ghats,gfinal,w_hats,wfinal,mufinal,[time1,time2,time3]
 
 
 ####################################

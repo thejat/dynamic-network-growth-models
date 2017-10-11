@@ -32,7 +32,6 @@ class EstimatorUtility(object):
 #Proposed Estimator for the Fixed Group Lazy Model 
 class EstimatorFixedGroupLazy(object):
 
-
 	def get_permutation_from_LP(self,Q1,Qt):
 
 		coeff = np.dot(np.transpose(Q1),Qt)
@@ -100,8 +99,6 @@ class EstimatorFixedGroupLazy(object):
 
 
 		return gfinal#, taus, Qs
-
-
 
 	def unify_communities_sets(self,ghats,k):
 		kappa = 1
@@ -428,9 +425,9 @@ class EstimatorFixedGroupBernoulli(object):
 			gfinal = gtruth
 		else:
 			#Estimate communities for individual snapshots
-			for i,G in enumerate(GT):
+			for t,G in enumerate(GT):
 				#ghats.append(community.best_partition(G))
-				ghats[i] = EstimatorUtility().graph_tool_community(G,k)
+				ghats[t] = EstimatorUtility().graph_tool_community(G,k)
 
 
 			#Aggregate/Unify
@@ -482,66 +479,205 @@ class EstimatorFixedGroupBernoulli(object):
 			
 		return ghats,gfinal,w_hats,wfinal,mufinal,[time1,time2,time3]
 
+# Proposed Estimator for the Majority Lazy Model
+class EstimatorMajorityLazy(object):
 
-####################################
-	def exhaustive_search_no_averaging(w_hats,r,s,debug=False):
+	def get_permutation(self, ghats, k):
+		gtilds=[]
+		gtilds[0]=ghats[0]
+		M=np.zeros((len(ghats),len(ghats[0].nodes)))
+		for t in range(0, len(ghats)):
+			for l in range(1, k+1):
+				def Stild(l,t):
+					S= []
+					for i in range(1, ghats[t].nodes+1):
+						if gtilds[t][i] == l:
+							S.append(i)
+					return S
 
-		def scoring(xivar,wvar,w_hats,r,s):
-			score = 0
-			for t in range(1,len(w_hats)+1):
-				score += abs(w_hats[t-1][r-1,s-1] - pow(xivar,t-1)*wvar + wvar*pow(1-xivar,t-1))
-			return score
-		grid_pts = np.linspace(0,1,41)
-		current_min = scoring(grid_pts[0],grid_pts[0],w_hats,r,s)
-		xiopt,wopt = 0,0
-		xvals,yvals,zvals = [],[],[]
-		for xivar in grid_pts:
-			for wvar in grid_pts:
-				candidate_score = scoring(xivar,wvar,w_hats,r,s)
-				if candidate_score <= current_min:
-					xiopt,wopt = xivar,wvar
-					current_min = candidate_score
-				if debug:
-					xvals.append(xivar)
-					yvals.append(wvar)
-					zvals.append(candidate_score)
+				def Shat(l,t):
+					S=[]
+					for i in range(1, ghats[t+1].nodes+1):
+						if ghats[t+1][i] == l:
+							S.append(i)
+				count=0
+			for l1 in range(1, k+1):
+				for l2 in range(1, k+1):
+					for i in range(1, ghats[t].nodes):
+						if i in Stild(l1,t) and i in Shat(l2,t):
+							count=+1
+					if count >len(Stild(l1,t))/2:
+						for i in range(1, ghats[t].nodes):
+							if i in Shat(l2,t):
+								gtilds[t+1][i]=l1
+							if i in Stild(l1,t) and i not in Shat(l2,t):
+								M[t][i]=0
+							if i in Stild(l1, t) and i in Shat(l2, t):
+								M[t][i] = 1
+							break
+		return M, gtilds
 
-		if debug:
-			from matplotlib import pyplot
-			from mpl_toolkits.mplot3d import Axes3D
-			fig = pyplot.figure()
-			ax = Axes3D(fig)
-			ax.scatter(xvals,yvals,zvals)
-			ax.set_xlabel('xi')
-			ax.set_ylabel('w')
-			pyplot.show()
+	def estimate_Maj_w_mle(self, G, r, s, t, gtilds, debug=False):
+		rcount, scount, rscount = 0, 0, 0
 
-		return xiopt,wopt
+		# if debug:
+		# 	print 'gtild',gtild
 
-	def exhaustive_search_with_averaging(w_hats,r,s,debug=False):
+		for x in G.nodes():
+			if gtilds[t][x] == r:
+				rcount += 1
+			if gtilds[t][x] == s:
+				scount += 1
 
-		def scoring(xivar,wvar,w_hats,r,s,t):
-			return abs(w_hats[t-1][r-1,s-1] - pow(xivar,t-1)*wvar + wvar*pow(1-xivar,t-1))
+		for x in G.nodes():
+			for y in gtilds[t].nodes():
+				if (gtilds[t][x] == r and gtilds[t][y] == s) or (gtilds[t][x] == s and gtilds[t][y] == r):
+					if (x, y) in G.edges or (y, x) in G.edges():
+						rscount += 1  # edge representations in networkx are directed
 
-		xiopt_array,wopt_array = [],[]
-		for t in range(1,len(w_hats)+1):
+		if r == s:
+			scount = scount - 1  # in this case the mle is 2*number fo edges/((no of nodes)(no of nodes - 1))
 
-			grid_pts = np.linspace(0,1,41)
-			current_min = scoring(grid_pts[0],grid_pts[0],w_hats,r,s,t)
-			xiopt,wopt = 0,0
-			xvals,yvals,zvals = [],[],[]
-			for xivar in grid_pts:
-				for wvar in grid_pts:
-					candidate_score = scoring(xivar,wvar,w_hats,r,s,t)
+		# if debug:
+		# 	print r,s,rcount,scount,rscount
+
+		if rcount <= 0 or scount <= 0:
+			return 0
+		else:
+			return rscount * 1.0 / (rcount * scount)
+
+	def Maj_xiw_model_estimate_xiw(self, whats, r, s, gtildes, GT, debug=False):
+
+		def scoring(xivar, wvar, whats,r,s,M1, M2, gtildes, GT,t,k):
+			wbar=self.estimate_Maj_w_mle(self, G, r, s, 0, gtilds, debug=False)
+			if M1=1 and M2=1:
+				score= np.power(xivar,(t-1))wvar+(1-xivar)*(1-np.power(xivar, (t-1)))/(1-xivar)*wvar
+			if M1=1 and M2=0:
+				f=k*wbar/(k-1)
+				g=-1/(k-1)
+				def term1(f,g,xivar,t):
+					temp=1
+					temp1=1
+					temp2=0
+					temp3=0
+					term1=0
+					for u in range(1,t)
+						for v in range(u+1, t)
+							temp1=np.power(g,v)*temp
+							temp=temp1
+
+						temp3=np.power(xivar,(t-u))* np.power(f,(u))*temp+temp2
+						temp2=temp3
+					term1=temp2
+					return term1
+
+
+				def term2(xivar, )
+
+
+
+			return np.power((np.power(1- muvar*(1+wvar),(t-1))*wvar \
+				+ wvar*(1-np.power(1-muvar*(1+wvar),(t-1)))/(1+wvar) \
+				- whats[t][r-1,s-1]),2)
+
+		grid_pts = np.linspace(0, 1, 41)
+		muopt_array = []
+		wopt_array = []
+		score_log = np.zeros((len(grid_pts),len(grid_pts)))
+		print 'lenGT',len(GT)
+		for t in range(1, len(GT)):
+			current_min = 1e8 #Potential bug
+			muopt,wopt = grid_pts[0], grid_pts[0]
+			for i,muvar in enumerate(grid_pts):
+				for j,wvar in enumerate(grid_pts):
+					candidate_score = scoring(muvar, wvar,whats,r,s,gfinal,GT,t)
+					score_log[i,j] = candidate_score
+					if np.isnan(candidate_score):
+						continue
 					if candidate_score <= current_min:
-						xiopt,wopt = xivar,wvar
+						muopt = muvar
+						wopt = wvar
 						current_min = candidate_score
-			xiopt_array.append(xiopt)
+			muopt_array.append(muopt)
 			wopt_array.append(wopt)
 
-		return np.mean(np.array(xiopt_array)),np.mean(np.array(wopt_array))
+			# if debug:
+			# 	print 'score log: (',r,s,')'
+			# 	pprint.pprint(score_log)
+		return np.mean(muopt_array),np.mean(wopt_array)
 
+	def estimate_params(self, GT, k=2, W=np.eye(2), debug=False):
 
+		flag_estimate_g = False  # False
+		flag_estimate_w = True  # False
+
+		ghats = []
+		w_hats = {}
+		for t in range(len(GT)):
+			ghats.append(None)
+			w_hats[t] = None
+		gfinal = None
+
+		wfinal = None
+		xifinal = 0
+		time0 = time.time()
+
+		if debug:
+			print 'Estimating groups, w, xi. Timing starts here.'
+
+		gtruth = {x[0]: x[1]['group'][0] for x in GT[0].nodes(data=True)}
+		if flag_estimate_g == False:
+			gfinal = gtruth
+		else:
+			# Estimate communities for individual snapshots
+			for i, G in enumerate(GT):
+				# ghats.append(community.best_partition(G))
+				ghats[i] = EstimatorUtility().graph_tool_community(G, k)
+
+			# Aggregate/Unify
+			# gfinal = self.unify_communities_sets(ghats,k)
+			gfinal = self.unify_communities_LP(ghats, k)
+
+		time1 = time.time() - time0
+		if debug:
+			for t in range(len(GT)):
+				print '\tsnapshot', t, ghats[t]
+			print '\tgfinal    ', gfinal
+			print '\ttruth     ', gtruth
+
+		if flag_estimate_w == False:
+			wfinal = W
+		else:
+			# Estimate w_hat_t_r_s
+			w_hats = {}
+			for t, G in enumerate(GT):
+				w_hats[t] = np.zeros((k, k))
+				for r in range(1, k + 1):
+					for s in range(1, k + 1):
+						w_hats[t][r - 1, s - 1] = self.estimate_w_mle(G, r, s, gfinal)  # gtruth # gfinal
+
+			# relate w_hats_t to ws
+			wfinal = np.zeros((k, k))
+			for r in range(1, k + 1):
+				for s in range(1, k + 1):
+					wfinal[r - 1, s - 1] = self.xiw_model_estimate_w(w_hats, r, s)
+
+		time2 = time.time() - time0
+		if debug:
+			for t in range(1, len(GT) + 1):
+				print '\n\t w_hats', t, w_hats[t - 1]
+			print '\twfinal', wfinal
+
+		# estimate xi exhausively
+		if debug:
+			print '\tEstimating xi start at time', time2
+		xifinal = self.xiw_model_estimate_xi(wfinal, gfinal, GT)  # wfinal # W
+		time3 = time.time() - time0
+		if debug:
+			print '\tEstimating xi end at time', time3
+			print '\txifinal', xifinal
+
+		return ghats, gfinal, w_hats, wfinal, xifinal, [time1, time2, time3]
 
 #Modified Estimator for Zhang 2016 Model A that Includes Arriving/Departing Nodes
 class EstimatorZhangAModified(object):
@@ -746,208 +882,6 @@ class EstimatorZhangAModified(object):
 		print "\t Time taken: ",time.time() - st
 
 		return lmbd,mu
-
-
-
-# Proposed Estimator for the Majority Lazy Model
-class EstimatorMajorityLazy(object):
-
-	def get_permutation(self, ghats, k):
-		gtilds=[]
-		gtilds[0]=ghats[0]
-		M=np.zeros((len(ghats),len(ghats[0].nodes)))
-		for t in range(0, len(ghats)):
-			for l in range(1, k+1):
-				def Stild(l,t):
-					S= []
-					for i in range(1, ghats[t].nodes+1):
-						if gtilds[t][i] == l:
-							S.append(i)
-					return S
-
-				def Shat(l,t):
-					S=[]
-					for i in range(1, ghats[t+1].nodes+1):
-						if ghats[t+1][i] == l:
-							S.append(i)
-				count=0
-			for l1 in range(1, k+1):
-				for l2 in range(1, k+1):
-					for i in range(1, ghats[t].nodes):
-						if i in Stild(l1,t) and i in Shat(l2,t):
-							count=+1
-					if count >len(Stild(l1,t))/2:
-						for i in range(1, ghats[t].nodes):
-							if i in Shat(l2,t):
-								gtilds[t+1][i]=l1
-							if i in Stild(l1,t) and i not in Shat(l2,t):
-								M[t][i]=0
-							if i in Stild(l1, t) and i in Shat(l2, t):
-								M[t][i] = 1
-							break
-		return M, gtilds
-
-	def estimate_Maj_w_mle(self, G, r, s, t, gtilds, debug=False):
-		rcount, scount, rscount = 0, 0, 0
-
-		# if debug:
-		# 	print 'gtild',gtild
-
-		for x in G.nodes():
-			if gtilds[t][x] == r:
-				rcount += 1
-			if gtilds[t][x] == s:
-				scount += 1
-
-		for x in G.nodes():
-			for y in gtilds[t].nodes():
-				if (gtilds[t][x] == r and gtilds[t][y] == s) or (gtilds[t][x] == s and gtilds[t][y] == r):
-					if (x, y) in G.edges or (y, x) in G.edges():
-						rscount += 1  # edge representations in networkx are directed
-
-		if r == s:
-			scount = scount - 1  # in this case the mle is 2*number fo edges/((no of nodes)(no of nodes - 1))
-
-		# if debug:
-		# 	print r,s,rcount,scount,rscount
-
-		if rcount <= 0 or scount <= 0:
-			return 0
-		else:
-			return rscount * 1.0 / (rcount * scount)
-
-	def Maj_xiw_model_estimate_xiw(self, whats, r, s, gtildes, GT, debug=False):
-
-		def scoring(xivar, wvar, whats,r,s,M1, M2, gtildes, GT,t,k):
-			wbar=self.estimate_Maj_w_mle(self, G, r, s, 0, gtilds, debug=False)
-			if M1=1 and M2=1:
-				score= np.power(xivar,(t-1))wvar+(1-xivar)*(1-np.power(xivar, (t-1)))/(1-xivar)*wvar
-			if M1=1 and M2=0:
-				f=k*wbar/(k-1)
-				g=-1/(k-1)
-				def term1(f,g,xivar,t):
-					temp=1
-					temp1=1
-					temp2=0
-					temp3=0
-					term1=0
-					for u in range(1,t)
-						for v in range(u+1, t)
-							temp1=np.power(g,v)*temp
-							temp=temp1
-
-						temp3=np.power(xivar,(t-u))* np.power(f,(u))*temp+temp2
-						temp2=temp3
-					term1=temp2
-					return term1
-
-
-				def term2(xivar, )
-
-
-
-			return np.power((np.power(1- muvar*(1+wvar),(t-1))*wvar \
-				+ wvar*(1-np.power(1-muvar*(1+wvar),(t-1)))/(1+wvar) \
-				- whats[t][r-1,s-1]),2)
-
-		grid_pts = np.linspace(0, 1, 41)
-		muopt_array = []
-		wopt_array = []
-		score_log = np.zeros((len(grid_pts),len(grid_pts)))
-		print 'lenGT',len(GT)
-		for t in range(1, len(GT)):
-			current_min = 1e8 #Potential bug
-			muopt,wopt = grid_pts[0], grid_pts[0]
-			for i,muvar in enumerate(grid_pts):
-				for j,wvar in enumerate(grid_pts):
-					candidate_score = scoring(muvar, wvar,whats,r,s,gfinal,GT,t)
-					score_log[i,j] = candidate_score
-					if np.isnan(candidate_score):
-						continue
-					if candidate_score <= current_min:
-						muopt = muvar
-						wopt = wvar
-						current_min = candidate_score
-			muopt_array.append(muopt)
-			wopt_array.append(wopt)
-
-			# if debug:
-			# 	print 'score log: (',r,s,')'
-			# 	pprint.pprint(score_log)
-		return np.mean(muopt_array),np.mean(wopt_array)
-
-	def estimate_params(self, GT, k=2, W=np.eye(2), debug=False):
-
-		flag_estimate_g = False  # False
-		flag_estimate_w = True  # False
-
-		ghats = []
-		w_hats = {}
-		for t in range(len(GT)):
-			ghats.append(None)
-			w_hats[t] = None
-		gfinal = None
-
-		wfinal = None
-		xifinal = 0
-		time0 = time.time()
-
-		if debug:
-			print 'Estimating groups, w, xi. Timing starts here.'
-
-		gtruth = {x[0]: x[1]['group'][0] for x in GT[0].nodes(data=True)}
-		if flag_estimate_g == False:
-			gfinal = gtruth
-		else:
-			# Estimate communities for individual snapshots
-			for i, G in enumerate(GT):
-				# ghats.append(community.best_partition(G))
-				ghats[i] = EstimatorUtility().graph_tool_community(G, k)
-
-			# Aggregate/Unify
-			# gfinal = self.unify_communities_sets(ghats,k)
-			gfinal = self.unify_communities_LP(ghats, k)
-
-		time1 = time.time() - time0
-		if debug:
-			for t in range(len(GT)):
-				print '\tsnapshot', t, ghats[t]
-			print '\tgfinal    ', gfinal
-			print '\ttruth     ', gtruth
-
-		if flag_estimate_w == False:
-			wfinal = W
-		else:
-			# Estimate w_hat_t_r_s
-			w_hats = {}
-			for t, G in enumerate(GT):
-				w_hats[t] = np.zeros((k, k))
-				for r in range(1, k + 1):
-					for s in range(1, k + 1):
-						w_hats[t][r - 1, s - 1] = self.estimate_w_mle(G, r, s, gfinal)  # gtruth # gfinal
-
-			# relate w_hats_t to ws
-			wfinal = np.zeros((k, k))
-			for r in range(1, k + 1):
-				for s in range(1, k + 1):
-					wfinal[r - 1, s - 1] = self.xiw_model_estimate_w(w_hats, r, s)
-
-		time2 = time.time() - time0
-		if debug:
-			for t in range(1, len(GT) + 1):
-				print '\n\t w_hats', t, w_hats[t - 1]
-			print '\twfinal', wfinal
-
-		# estimate xi exhausively
-		if debug:
-			print '\tEstimating xi start at time', time2
-		xifinal = self.xiw_model_estimate_xi(wfinal, gfinal, GT)  # wfinal # W
-		time3 = time.time() - time0
-		if debug:
-			print '\tEstimating xi end at time', time3
-			print '\txifinal', xifinal
-
-		return ghats, gfinal, w_hats, wfinal, xifinal, [time1, time2, time3]
 
 
 if __name__=='__main__':

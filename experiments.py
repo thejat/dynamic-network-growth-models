@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 np.random.seed(1000)
-from graph_generators import generate_Zhang_modelA_modified, generate_fixed_group_lazy, generate_fixed_group_bernoulli
-from graph_estimators import EstimatorZhangAModified, EstimatorFixedGroupLazy, EstimatorFixedGroupBernoulli
+from graph_generators import generate_Zhang_modelA_modified, generate_fixed_group_lazy, generate_fixed_group_bernoulli, generate_changing_group_MM
+from graph_estimators import EstimatorZhangAModified, EstimatorFixedGroupLazy, EstimatorFixedGroupBernoulli, EstimatorChangingGroupMM
 import time, pickle
 
 def run_experiment_Zhang_modelA_modified():
@@ -121,6 +121,50 @@ def run_experiment_fixed_group_bernoulli():
 		pickle.dump({'log':log,'params':params},open('explog_bernoulli.pkl','wb'))
 		print 'Experiment end time:', time.time()-start_time
 
+def run_experiment_changing_group_MM():
+	debug = False
+	params = {}
+	params['n_mcruns'] 		=     1
+	params['total_time'] 	=     1
+	params['xitrue'] 		=     0
+	params['Wtrue'] 		= np.array([[.65,.1],[.1,0.65]])#[[1,.0],[.0,1]])
+	params['k'] 			= params['Wtrue'].shape[0]
+	params['n'] 			=     8
+	params['minority_pct_ub'] =   0
+	start_time = time.time()
+
+	def save_estimates(params):
+		GT = generate_changing_group_MM(minority_pct_ub=params['minority_pct_ub'],xi=params['xitrue'],W=params['Wtrue'],
+				n=params['n'],k=params['k'], flag_draw=True,total_time=params['total_time'])
+		t_t 	  = []
+		t_gfinals = []
+		t_mfinals = []
+		t_wfinal  = []
+		t_xifinal = []
+		t_timing  = []
+		for t in range(2,params['total_time']+1):
+			print "  Estimating with number of snaps: ",t, " of", params['total_time'], ": starting at time", time.time()-start_time
+			ghats,gfinals,mfinals,w_hats,wfinal,xifinal,times = EstimatorChangingGroupMM().estimate_params(GT[:t],params['k'],params['Wtrue'],params['xitrue'])
+
+			t_gfinal.append(gfinals)
+			t_mfinal.append(mfinals)
+			t_wfinal.append(wfinal)
+			t_xifinal.append(xifinal)
+			t_t.append(t)
+			t_timing.append(times)
+		return {'graphs':GT,'gfinalst':t_gfinals,'mfinalst':t_mfinals,'xifinals':t_xifinal,'n_snapshots':t_t,'wfinals':t_wfinal,'comptime':t_timing}
+
+
+	log = {}
+	for mcrun in range(params['n_mcruns']):
+		print "Estimation Monte Carlo Run # ",mcrun+1, " of ",params['n_mcruns']
+		log[mcrun] = save_estimates(params)
+		print "  Run funish time:", time.time()-start_time
+
+		print 'Saving a log of the experiment. This will be overwritten.'
+		pickle.dump({'log':log,'params':params},open('explog_mm.pkl','wb'))
+		print 'Experiment end time:', time.time()-start_time
+
 if __name__=='__main__':
 
 	#Zhang Model A Modified
@@ -130,4 +174,7 @@ if __name__=='__main__':
 	# run_experiment_fixed_group_lazy()
 
 	#Fixed group Bernoulli
-	run_experiment_fixed_group_bernoulli()
+	# run_experiment_fixed_group_bernoulli()
+
+	#Majority/Minority model
+	run_experiment_changing_group_MM()

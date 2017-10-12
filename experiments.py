@@ -125,17 +125,17 @@ def run_experiment_changing_group_MM():
 	debug = False
 	params = {}
 	params['n_mcruns'] 		=     1
-	params['total_time'] 	=     1
+	params['total_time'] 	=     5
 	params['xitrue'] 		=     0
 	params['Wtrue'] 		= np.array([[.65,.1],[.1,0.65]])#[[1,.0],[.0,1]])
 	params['k'] 			= params['Wtrue'].shape[0]
 	params['n'] 			=     8
-	params['minority_pct_ub'] =   0
+	params['minority_pct_ub'] =   0.2
 	start_time = time.time()
 
 	def save_estimates(params):
 		GT = generate_changing_group_MM(minority_pct_ub=params['minority_pct_ub'],xi=params['xitrue'],W=params['Wtrue'],
-				n=params['n'],k=params['k'], flag_draw=True,total_time=params['total_time'])
+				n=params['n'],k=params['k'], flag_draw=False,total_time=params['total_time'])
 		t_t 	  = []
 		t_gfinals = []
 		t_mfinals = []
@@ -146,8 +146,8 @@ def run_experiment_changing_group_MM():
 			print "  Estimating with number of snaps: ",t, " of", params['total_time'], ": starting at time", time.time()-start_time
 			ghats,gfinals,mfinals,w_hats,wfinal,xifinal,times = EstimatorChangingGroupMM().estimate_params(GT[:t],params['k'],params['Wtrue'],params['xitrue'])
 
-			t_gfinal.append(gfinals)
-			t_mfinal.append(mfinals)
+			t_gfinals.append(gfinals)
+			t_mfinals.append(mfinals)
 			t_wfinal.append(wfinal)
 			t_xifinal.append(xifinal)
 			t_t.append(t)

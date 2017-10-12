@@ -397,7 +397,7 @@ class EstimatorChangingGroupMM(object):
 		M={} #np.zeros((len(ghats)-1,len(ghats[0])))
 		Stild = {}
 		Shat = {}
-		for t in range(0, len(ghats)):
+		for t in range(0, len(ghats)-1):
 			print "t",t
 			for l in range(1, k+1):
 
@@ -433,7 +433,7 @@ class EstimatorChangingGroupMM(object):
 						print 'M[t]',M[t]
 						break
 			print 'gtilds at t+1 =',t+1,' is ',gtilds[t+1]
-		return M, gtilds
+		return gtilds,M
 
 	def maj_xiw_model_estimate_xiw(self, w_hats,r,s,gfinals,mfinals,GT, debug=False):
 
@@ -499,7 +499,8 @@ class EstimatorChangingGroupMM(object):
 
 	def estimate_params(self, GT, k=2, W=np.eye(2), xi=1, debug=False):
 
-		flag_estimate_g = True  # False
+		flag_estimate_ghats = False #True
+		flag_estimate_g_m   = True
 		flag_estimate_w_and_xi = False  # False
 
 		ghats   = []
@@ -516,7 +517,17 @@ class EstimatorChangingGroupMM(object):
 		if debug:
 			print 'Estimating groups, w, xi. Timing starts here.'
 
-		if flag_estimate_g == False:
+		if flag_estimate_ghats==True:
+			# Estimate communities for individual snapshots
+			for t, G in enumerate(GT):
+				# ghats.append(community.best_partition(G))
+				ghats[t] = EstimatorUtility().graph_tool_community(G, k)
+		else:
+			for t,G in enumerate(GT):
+				ghats[t] = {x[0]: x[1]['group'][0] for x in GT[t].nodes(data=True)}
+
+
+		if flag_estimate_g_m == False:
 			gfinals = []
 			for t,G in enumerate(GT):
 				gfinals[t] = {x[0]: x[1]['group'][0] for x in GT[t].nodes(data=True)}
@@ -530,11 +541,6 @@ class EstimatorChangingGroupMM(object):
 			# 		mfinals = None # TBD
 
 		else:
-			# Estimate communities for individual snapshots
-			for t, G in enumerate(GT):
-				# ghats.append(community.best_partition(G))
-				ghats[t] = EstimatorUtility().graph_tool_community(G, k)
-
 			# Aggregate/Unify
 			gfinals,mfinals = self.get_permuted_groups_majority_info(ghats, k)
 
@@ -543,6 +549,7 @@ class EstimatorChangingGroupMM(object):
 			for t in range(len(GT)):
 				print '\tsnapshot', t,' ghat  ', ghats[t]
 				print '\tsnapshot', t,' gfinal', gfinals[t]
+				print '\tsnapshot', t,' mfinal', mfinals[t]
 
 		if flag_estimate_w_and_xi == False:
 			wfinal = W #copying the ground truth
@@ -556,10 +563,10 @@ class EstimatorChangingGroupMM(object):
 					for s in range(1, k + 1):
 						w_hats[t][r - 1, s - 1] = EstimatorFixedGroupLazy().estimate_w_mle(G, r, s, gfinals[t])
 
-			time2 = time.time()- time0
-			if debug:
-				for t in range(1,len(GT)+1):
-					print '\n\t w_hats',t,w_hats[t-1]
+		time2 = time.time()- time0
+		if debug:
+			for t in range(1,len(GT)+1):
+				print '\n\t w_hats',t,w_hats[t-1]
 
 
 			#Estimate wfinal and xifinal
@@ -578,12 +585,21 @@ class EstimatorChangingGroupMM(object):
 				wfinal[r,r] = on_diagonal
 
 
-			time3 = time.time()-time0
-			if debug:
-				print '\tEstimating w and xi ends at time',time3
-				print '\txifinal', xifinal
-				print '\twfinal', wfinal
+		time3 = time.time()-time0
+		if debug:
+			print '\tEstimating w and xi ends at time',time3
+			print '\txifinal', xifinal
+			print '\twfinal', wfinal
 
+		print ghats
+		print gfinals
+		print mfinals
+		for t in range(len(GT)):
+			print '\tsnapshot', t,' ghat  ', ghats[t]
+			print '\tsnapshot', t,' gfinal', gfinals[t]
+			if t==len(GT)-1:
+				continue
+			print '\tsnapshot', t,' mfinal', mfinals[t]
 			
 		return ghats,gfinals,mfinals,w_hats,wfinal,xifinal,[time1,time2,time3]
 

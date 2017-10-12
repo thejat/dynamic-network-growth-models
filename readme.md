@@ -9,4 +9,8 @@ This codebase is for algorithms proposed in the aforementioned [paper](https://t
 
 The easiest way to get started is to look at experiments.py and go from there. 
 
+##### Dependencies
+
+These are: numpy, networkx, [graph-tool](https://graph-tool.skewed.de/)
+
 Please make a pull request if you spot bugs or have suggestions!

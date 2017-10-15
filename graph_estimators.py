@@ -1,6 +1,6 @@
 #graph parameter estimation
 import numpy as np
-import time,pprint
+import time, pprint, copy
 import networkx as nx
 # import community
 from graph_tool import Graph, collection, inference
@@ -157,7 +157,7 @@ class EstimatorFixedGroupLazy(object):
 			print wopt_array,np.mean(wopt_array),np.median(wopt_array)
 		return np.mean(wopt_array)
 
-	def xiw_model_estimate_xi(self,wfinal,gfinal,GT,debug=False):
+	def xiw_model_estimate_xi(self,wfinal,gfinal,GT,ngridpoints=21,debug=False):
 
 		def scoring(xivar,wfinal,gfinal,GT):
 			score = 0
@@ -179,7 +179,7 @@ class EstimatorFixedGroupLazy(object):
 								+ (1-current_edge)*(1 - wfinal[gfinal[i]-1,gfinal[j]-1])))
 			return score
 
-		grid_pts = np.linspace(0,1,41)
+		grid_pts = np.linspace(0,1,ngridpoints)
 		current_max = scoring(grid_pts[0],wfinal,gfinal,GT)
 		xiopt=0
 		score_log = []
@@ -193,7 +193,7 @@ class EstimatorFixedGroupLazy(object):
 			print 'score log: ',score_log
 		return xiopt
 
-	def estimate_params(self,GT,k=2,W=np.eye(2),debug=False):
+	def estimate_params(self,GT,k=2,W=np.eye(2),ngridpoints=21,debug=False):
 
 		flag_estimate_g  = False # False
 		flag_estimate_w  = True # False
@@ -261,7 +261,7 @@ class EstimatorFixedGroupLazy(object):
 		#estimate xi exhausively
 		if debug:
 			print '\tEstimating xi start at time',time2
-		xifinal = self.xiw_model_estimate_xi(wfinal,gfinal,GT) # wfinal # W
+		xifinal = self.xiw_model_estimate_xi(wfinal,gfinal,GT,ngridpoints) # wfinal # W
 		time3 = time.time()-time0
 		if debug:
 			print '\tEstimating xi end at time',time3
@@ -273,14 +273,14 @@ class EstimatorFixedGroupLazy(object):
 #Proposed Estimator for the Fixed Group Bernoulli Model
 class EstimatorFixedGroupBernoulli(object):
 
-	def muw_model_estimate_muw(self, w_hats, r, s, gfinal,GT, debug=False):
+	def muw_model_estimate_muw(self, w_hats, r, s, gfinal,GT, ngridpoints=21,debug=False):
 
 		def scoring(muvar, wvar, w_hats,r,s,gfinal, GT,t):
 			return np.power((np.power(1- muvar*(1+wvar),(t-1))*wvar \
 				+ wvar*(1-np.power(1-muvar*(1+wvar),(t-1)))/(1+wvar) \
 				- w_hats[t][r-1,s-1]),2)
 
-		grid_pts = np.linspace(0, 1, 41)
+		grid_pts = np.linspace(0, 1, ngridpoints)
 		muopt_array = []
 		wopt_array = []
 		score_log = np.zeros((len(grid_pts),len(grid_pts)))
@@ -306,7 +306,7 @@ class EstimatorFixedGroupBernoulli(object):
 			# 	pprint.pprint(score_log)
 		return np.mean(muopt_array),np.mean(wopt_array)
 
-	def estimate_params(self,GT,k=2,W=np.eye(2),Mu=np.eye(2),debug=True):
+	def estimate_params(self, GT, k=2, W=np.eye(2), Mu=np.eye(2), ngridpoints=21,debug=True):
 
 		flag_estimate_g  = False # False
 		flag_estimate_w_and_mu  = True # False
@@ -373,7 +373,7 @@ class EstimatorFixedGroupBernoulli(object):
 			mufinal = np.zeros((k,k))
 			for r in range(1,k+1):
 				for s in range(1,k+1):
-					mufinal[r-1,s-1],wfinal[r-1,s-1] = self.muw_model_estimate_muw(w_hats,r,s,gfinal,GT,debug=False)
+					mufinal[r-1,s-1],wfinal[r-1,s-1] = self.muw_model_estimate_muw(w_hats,r,s,gfinal,GT,ngridpoints,debug=False)
 
 			time3 = time.time()-time0
 			if debug:
@@ -387,7 +387,7 @@ class EstimatorFixedGroupBernoulli(object):
 # Proposed Estimator for the Majority Lazy Model
 class EstimatorChangingGroupMM(object):
 
-	def get_permuted_groups_majority_info(self, ghats, k, debug=True):
+	def get_permuted_groups_majority_info(self, ghats, k, debug=False):
 
 		if debug:
 			print ghats[0]
@@ -421,8 +421,9 @@ class EstimatorChangingGroupMM(object):
 
 			gtilds[t+1] = {}
 			M[t] = {}
+			detected_sets = range(1, k+1)
 			for l1 in range(1, k+1):
-				for l2 in range(1, k+1):
+				for l2 in detected_sets:
 					if debug:
 						print '\t\tl1 ',l1, 'l2 ',l2
 					I = Stild[(l1,t)].intersection(Shat[(l2,t+1)])
@@ -437,10 +438,37 @@ class EstimatorChangingGroupMM(object):
 								M[t][i]=0
 						for i in I:
 							M[t][i] = 1
+						detected_sets.remove(l2)
 						if debug:
 							print '\t\t\tgtilds[t+1]', gtilds[t+1]
 							print '\t\t\tM[t]       ', M[t]
 						break
+
+			#repeated with geq
+			if len(detected_sets) > 0:
+				detected_sets_copy = copy.deepcopy(detected_sets)
+				for l1 in detected_sets_copy:
+					for l2 in detected_sets:
+						if debug:
+							print '\t\tl1 ',l1, 'l2 ',l2
+						I = Stild[(l1,t)].intersection(Shat[(l2,t+1)])
+						if debug:
+							print '\t\tIntersection set: ',I
+						if len(I) >= len(Stild[(l1,t)])*1.0/2: #Ideally should be greater
+							if debug:
+								print "\t\tFound majority. Updating gtilds, M"
+							for i in Shat[(l2,t+1)]:
+									gtilds[t+1][i]=l1
+							for i in Stild[(l1,t)].difference(I):
+									M[t][i]=0
+							for i in I:
+								M[t][i] = 1
+							detected_sets.remove(l2)
+							if debug:
+								print '\t\t\tgtilds[t+1]', gtilds[t+1]
+								print '\t\t\tM[t]       ', M[t]
+							break
+
 			if debug:
 				print '\t\tgtilds at t+1 =',t+1,' is ',gtilds[t+1]
 		return gtilds,M

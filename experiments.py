@@ -44,12 +44,13 @@ def run_experiment_Zhang_modelA_modified():
 def run_experiment_fixed_group_lazy():
 	debug = False
 	params = {}
-	params['n_mcruns'] 		=   5
+	params['n_mcruns'] 		=   10
 	params['total_time'] 	=   16
-	params['xitrue'] 		=   0
+	params['xitrue'] 		=   .5
 	params['Wtrue'] 		= np.array([[.65,.1],[.1,0.5]])#[[1,.0],[.0,1]])# #np.random.rand(k,k)
 	params['k'] 			= params['Wtrue'].shape[0]
-	params['n'] 			=  20
+	params['n'] 			=   16
+	params['ngridpoints']	=   41
 	start_time = time.time()
 
 	def save_estimates(params):
@@ -62,7 +63,7 @@ def run_experiment_fixed_group_lazy():
 		t_timing  = []
 		for t in range(2,params['total_time']+1):
 			print "  Estimating with number of snaps: ",t, " of", params['total_time'], ": starting at time", time.time()-start_time
-			ghats,gfinal,w_hats,wfinal,xifinal,times = EstimatorFixedGroupLazy().estimate_params(GT[:t],params['k'],params['Wtrue'])
+			ghats,gfinal,w_hats,wfinal,xifinal,times = EstimatorFixedGroupLazy().estimate_params(GT[:t],params['k'],params['Wtrue'],params['ngridpoints'])
 			t_gfinal.append(gfinal)
 			t_wfinal.append(wfinal)
 			t_xifinal.append(xifinal)
@@ -84,12 +85,13 @@ def run_experiment_fixed_group_lazy():
 def run_experiment_fixed_group_bernoulli():
 	debug = False
 	params = {}
-	params['n_mcruns'] 		=   2
-	params['total_time'] 	=  12
+	params['n_mcruns'] 		=  10
+	params['total_time'] 	=  16
 	params['Mutrue'] 		= np.array([[.5,.5],[.2,.6]])
 	params['Wtrue'] 		= np.array([[.7,.1],[.1,.7]])#[[1,.0],[.0,1]])# #np.random.rand(k,k)
 	params['k'] 			= params['Wtrue'].shape[0]
 	params['n'] 			=  16
+	params['ngridpoints']	=  41
 	start_time = time.time()
 
 	def save_estimates(params):
@@ -102,7 +104,7 @@ def run_experiment_fixed_group_bernoulli():
 		t_timing  = []
 		for t in range(2,params['total_time']+1):
 			print "  Estimating with number of snaps: ",t, " of", params['total_time'], ": starting at time", time.time()-start_time
-			ghats,gfinal,w_hats,wfinal,mufinal,times = EstimatorFixedGroupBernoulli().estimate_params(GT[:t],params['k'],params['Wtrue'],params['Mutrue'])
+			ghats,gfinal,w_hats,wfinal,mufinal,times = EstimatorFixedGroupBernoulli().estimate_params(GT[:t],params['k'],params['Wtrue'],params['Mutrue'],params['ngridpoints'])
 			t_gfinal.append(gfinal)
 			t_wfinal.append(wfinal)
 			t_mufinal.append(mufinal)
@@ -174,7 +176,7 @@ if __name__=='__main__':
 	# run_experiment_fixed_group_lazy()
 
 	#Fixed group Bernoulli
-	# run_experiment_fixed_group_bernoulli()
+	run_experiment_fixed_group_bernoulli()
 
 	#Majority/Minority model
-	run_experiment_changing_group_MM()
+	# run_experiment_changing_group_MM()

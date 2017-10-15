@@ -75,7 +75,7 @@ def plot_fixed_bernoulli():
 	time = range(1,params['total_time'])
 	title='Estimation of W'
 	plot_error_vs_time(error,time,title)
-	error = [np.linalg.norm(params['mutrue']-x,'fro') for x in ts_meanmu]
+	error = [np.linalg.norm(params['Mutrue']-x,'fro') for x in ts_meanmu]
 	time = range(1,params['total_time'])
 	title='Estimation of Mu'
 	plot_error_vs_time(error,time,title)
@@ -110,6 +110,6 @@ def plot_changing_mm():
 	plot_error_vs_time(error,time,title)
 
 if __name__ == '__main__':
-	# plot_fixed_lazy()
+	plot_fixed_lazy()
 	# plot_fixed_bernoulli()
-	plot_changing_mm()
+	# plot_changing_mm()

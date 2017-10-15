@@ -428,7 +428,7 @@ class EstimatorChangingGroupMM(object):
 					I = Stild[(l1,t)].intersection(Shat[(l2,t+1)])
 					if debug:
 						print '\t\tIntersection set: ',I
-					if len(I) >= len(Stild[(l1,t)])*1.0/2: #Ideally should be greater
+					if len(I) > len(Stild[(l1,t)])*1.0/2: #Ideally should be greater
 						if debug:
 							print "\t\tFound majority. Updating gtilds, M"
 						for i in Shat[(l2,t+1)]:

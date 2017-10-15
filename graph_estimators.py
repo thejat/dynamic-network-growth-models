@@ -568,7 +568,7 @@ class EstimatorChangingGroupMM(object):
 
 		return wfinal,xifinal
 
-	def estimate_params(self, GT, k=2, W=np.eye(2), xi=1, debug=False):
+	def estimate_params(self, GT, k=2, W=np.eye(2), xi=1, ngridpoints=21, debug=False):
 
 		flag_estimate_ghats 				= False #True
 		flag_estimate_gfinals_mfinals   	= True
@@ -655,7 +655,7 @@ class EstimatorChangingGroupMM(object):
 		if debug:
 			print '\tEstimating w and xi starts at time',time2
 		if flag_estimate_wfinal_and_xifinal == True:
-			wfinal,xifinal = self.maj_xiw_model_estimate_xiw(w_hats,gfinals,mfinals,k,GT,debug=False)
+			wfinal,xifinal = self.maj_xiw_model_estimate_xiw(w_hats,gfinals,mfinals,k,GT,ngridpoints, debug=False)
 		else:
 			wfinal = W #copying the ground truth
 			xifinal = xi #copying the ground truth

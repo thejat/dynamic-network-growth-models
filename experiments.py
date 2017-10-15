@@ -44,12 +44,12 @@ def run_experiment_Zhang_modelA_modified():
 def run_experiment_fixed_group_lazy():
 	debug = False
 	params = {}
-	params['n_mcruns'] 		=   10
-	params['total_time'] 	=   16
+	params['n_mcruns'] 		=    2
+	params['total_time'] 	=   24
 	params['xitrue'] 		=   .5
 	params['Wtrue'] 		= np.array([[.65,.1],[.1,0.5]])#[[1,.0],[.0,1]])# #np.random.rand(k,k)
 	params['k'] 			= params['Wtrue'].shape[0]
-	params['n'] 			=   16
+	params['n'] 			=   24
 	params['ngridpoints']	=   41
 	start_time = time.time()
 
@@ -126,13 +126,14 @@ def run_experiment_fixed_group_bernoulli():
 def run_experiment_changing_group_MM():
 	debug = False
 	params = {}
-	params['n_mcruns'] 		=      8
-	params['total_time'] 	=     16
-	params['xitrue'] 		=     .5
-	params['Wtrue'] 		= np.array([[.7,.2],[.2,0.7]])
+	params['n_mcruns'] 		=      1
+	params['total_time'] 	=     24
+	params['xitrue'] 		=      0
+	params['Wtrue'] 		= np.array([[.6,.1],[.1,.6]])
 	params['k'] 			= params['Wtrue'].shape[0]
-	params['n'] 			=     16
+	params['n'] 			=     12
 	params['minority_pct_ub'] = 0.25
+	params['ngridpoints']	=     11
 	start_time = time.time()
 
 	def save_estimates(params):
@@ -146,7 +147,7 @@ def run_experiment_changing_group_MM():
 		t_timing  = []
 		for t in range(2,params['total_time']+1):
 			print "  Estimating with number of snaps: ",t, " of", params['total_time'], ": starting at time", time.time()-start_time
-			ghats,gfinals,mfinals,w_hats,wfinal,xifinal,times = EstimatorChangingGroupMM().estimate_params(GT[:t],params['k'],params['Wtrue'],params['xitrue'])
+			ghats,gfinals,mfinals,w_hats,wfinal,xifinal,times = EstimatorChangingGroupMM().estimate_params(GT[:t],params['k'],params['Wtrue'],params['xitrue'],params['ngridpoints'])
 
 			t_gfinals.append(gfinals)
 			t_mfinals.append(mfinals)

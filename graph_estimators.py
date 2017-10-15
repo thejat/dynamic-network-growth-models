@@ -446,74 +446,90 @@ class EstimatorChangingGroupMM(object):
 	def maj_xiw_model_estimate_xiw(self, w_hats, gfinals, mfinals,GT, M, debug=False):
 
 
-		def scoring(xivar, avar, wbarvar, whats, gfinals, mfinals, GT):
-			wbar=0
-			w_hats = {}
-			f={}
-			score={}
-			for t, G in enumerate(GT):
-				w_hats[t] = np.zeros((k, k))
-				for r in range(1, k + 1):
-					for s in range(1, k + 1):
-						w_hats[t][r - 1, s - 1] = EstimatorFixedGroupLazy().estimate_w_mle(G, r, s, gtildes[t])
+		def scoring(xivar, avar, wbaropt, whats, gfinals, f, g, k, GT):
+			score = 0
+			for t in range(1,len(GT)):
+				for r in range(1,k+1):
+					for s in range(1,k+1):
+						rcount,scount = 0,0
+						for x in GT[t].nodes():
+							if gfinals[t][x]==r:
+								rcount += 1
+							if gfinals[t][x]==s:
+								scount += 1
+						if r==s:
+							scount = scount - 1 # in this case the mle is 2*number fo edges/((no of nodes)(no of nodes - 1))
+							multiplier = avar*k*wbaropt + (1-avar)*wbaropt
+						else:
+							multiplier = (1-avar)*wbaropt
 
-			for r in range(1, k+1):
-				for s in range(1, k + 1):
-					wbar=wbar + w_hats[0][r - 1, s - 1]
-			wbar= wbar/np.power(k,2)
+						term1 = 0
+						term2 = 0
+						term3 = 0
 
-			f=np.zeros((len(G.nodes), len(G.nodes)))
-			for t in range(0, len(GT)+1):
-				for i in G.nodes:
-					for j in G.nodes:
-						f[t][i-1,j-1]= M[t][i]*(1-M[t][j])*k*wbar/(k-1)\
-									   + (1-M[t][i])*M[t][j]*k*wbar/k-1+(1-M[t][i])*(1-M[t][j])*wbar*(np.power(k,2)-2*k)/(np.power(k-1,2))
+						# term1
+						for u in range(1, t):
+							for v in range(u+1,t):
+								temp2=temp2* g[v][i-1,j-1]
+								temp1=temp1+temp2*np.power(xivar,t-u)*f[u][i-1,j-1]
+						
+						# term2
+						for u in range(1,t)
+							temp3=temp3*g[t][i,j]
+						temp3=temp3*np.power(xivar,(t-1))*wvar
 
-			g = np.zeros((len(G.nodes), len(G.nodes)))
-			for t in range(0, len(GT) + 1):
-				for i in G.nodes:
-					for j in G.nodes:
-						g[t][i - 1, j - 1] =M[i][t]*M[j][t]-M[i][t]*(1-M[j][t])/(k-1)
-						-(1-M[i][t])*M[j][t]/(k-1)+(1-M[i][t])*(1-M[j][t])/np.power((k-1),2)
-			temp1=1
-			temp2=1
-			temp3=1
-			temp4=1
-			temp5=1
-			for u in range(1, t):
-					for v in range(u+1,t):
-						temp2=temp2* g[v][i-1,j-1]
-					temp1=temp1+temp2*np.power(xivar,t-u)*f[u][i-1,j-1]
-			for u in range(1,t)
-				temp3=temp3*g[t][i,j]
-			temp3=temp3*np.power(xivar,(t-1))*wvar
+						# term3
+						for u in range(1, t):
+								for v in range(u+1,t):
+									temp4=temp4* g[v][i-1,j-1]
+								temp5=temp5+temp4*np.power(xivar,t-u-1)
+						temp5=temp5*(1-xivar)*wvar
 
-			for u in range(1, t):
-					for v in range(u+1,t):
-						temp4=temp4* g[v][i-1,j-1]
-					temp5=temp5+temp4*np.power(xivar,t-u-1)
-			temp5=temp5*(1-xivar)*wvar
+						score += rcount*scount*np.power(whats[t][r-1,s-1] - term1 - term2 - term3,2)
 
 			return temp1+temp3+temp5
 
 
+		#Step: Estimate wbaropt via averaging
+		wbaropt = 0
+		for t in range(len(GT)):
+			wbaropt += np.mean(whats[t])
+		wbaropt = wbaropt*1.0/len(GT)
 
-		#Step: Gridsearch xiopt,aopt,wbaropt
+		#Step: Compute f,g intermediate quantities needed for Gridsearch
+		f={}
+		for t in range(len(GT)-1):
+			f[t] = np.zeros((len(GT[t].nodes()), len(GT[t].nodes())))
+			for i in GT[t].nodes():
+				for j in GT[t].nodes():
+					f[t][i-1,j-1]= mfinals[t][i]*(1-mfinals[t][j])*k*wbaropt*1.0/(k-1)\
+						+ (1-mfinals[t][i])*mfinals[t][j]*k*wbaropt*1.0/(k-1)\
+						+ (1-mfinals[t][i])*(1-mfinals[t][j])*wbaropt*(np.power(k,2)-2*k)*1.0/np.power(k-1,2)
+
+		g = {}
+		for t in range(len(GT)-1):
+			g[t] = np.zeros((len(GT[t].nodes()), len(GT[t].nodes())))
+			for i in GT[t].nodes():
+				for j in GT[t].nodes():
+					g[t][i - 1, j - 1] = mfinals[t][i]*mfinals[t][j] \
+					- mfinals[t][i]*(1-mfinals[t][j])*1.0/(k-1) \
+					- (1-mfinals[t][i])*mfinals[t][j]*1.0/(k-1) \
+					+ (1-mfinals[t][i])*(1-mfinals[t][j])*1.0/np.power((k-1),2)
+
+		#Step: Gridsearch xiopt,aopt
 		grid_pts = np.linspace(0, 1, 11)
-		score_log = np.zeros((len(grid_pts),len(grid_pts),len(grid_pts)))
+		score_log = np.zeros((len(grid_pts),len(grid_pts)))
 		current_min = 1e8 #Potential bug
-		xiopt,aopt,wbaropt = grid_pts[0],grid_pts[0], grid_pts[0]
+		xiopt,aopt = grid_pts[0],grid_pts[0]
 			for ix1,xivar in enumerate(grid_pts):
 				for ix2,avar in enumerate(grid_pts):
-					for ix3,wbarvar in enumerate(grid_pts):
-						candidate_score = scoring(xivar, avar, wbarvar, whats, gfinals, mfinals, GT)
+					candidate_score = scoring(xivar, avar, wbaropt, whats, gfinals, f, g, k, GT)
 					score_log[ix1,ix2,ix3] = candidate_score
 					if np.isnan(candidate_score):
 						continue
 					if candidate_score <= current_min:
 						xiopt = xivar
 						aopt = avar
-						wbaropt = wbarvar
 						current_min = candidate_score
 		if debug:
 			print 'xiopt',xiopt

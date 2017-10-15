@@ -97,7 +97,7 @@ def generate_fixed_group_lazy(xi=0.5,W=np.eye(2),n=10,k=2,flag_draw=False,total_
 
 	return GT
 
-def generate_changing_group_MM(minority_pct_ub=0.4, xi=1, W=np.matrix('0.9 0.1; 0.1 0.9'), n=20, k=2, flag_draw=True, total_time=2):
+def generate_changing_group_MM(minority_pct_ub=0.4, xi=1, W=np.matrix('0.9 0.1; 0.1 0.9'), n=20, k=2, flag_draw=True, total_time=2,debug=False):
     st = time.time()
     print 'Generating data'
     Goriginal = nx.Graph()
@@ -132,15 +132,17 @@ def generate_changing_group_MM(minority_pct_ub=0.4, xi=1, W=np.matrix('0.9 0.1; 
         for l in range(1, k + 1):
             counter = 0
             pct_ub = np.random.rand()*minority_pct_ub
-            print 'pct_ub',pct_ub
-            print 'communit of node 1 is ',Gcurrent.node[1]['group']
+            if debug:
+                print 'pct_ub',pct_ub
+                print 'community of node 1 is ',Gcurrent.node[1]['group']
             for i in Gcurrent.nodes():
                 if Gcurrent.node[i]['group'] == l:
                     if np.random.rand() < pct_ub:
                         Gcurrent.node[i]['group'] = np.random.choice(range(1, l)+range(l+1, k+1), 1)
                         counter += 1
                         GT[t - 1].node[i]['majority'] = 0
-                        print 'node ', i, ' changed community from ',l,' at time ',t
+                        if debug:
+                            print 'node ', i, ' changed community from ',l,' at time ',t
                 if counter >= minority_pct_ub*sizecm[0][l-1]:
                     break
 

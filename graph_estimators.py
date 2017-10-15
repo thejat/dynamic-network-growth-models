@@ -387,9 +387,11 @@ class EstimatorFixedGroupBernoulli(object):
 # Proposed Estimator for the Majority Lazy Model
 class EstimatorChangingGroupMM(object):
 
-	def get_permuted_groups_majority_info(self, ghats, k):
-		print ghats[0]
-		print ghats[1]
+	def get_permuted_groups_majority_info(self, ghats, k, debug=False):
+
+		if debug:
+			print ghats[0]
+			print ghats[1]
 
 		gtilds={}
 		gtilds[0]=ghats[0]
@@ -398,7 +400,8 @@ class EstimatorChangingGroupMM(object):
 		Stild = {}
 		Shat = {}
 		for t in range(0, len(ghats)-1):
-			print "t",t
+			if debug:
+				print "t",t
 			for l in range(1, k+1):
 
 				Stild[(l,t)] = set()
@@ -410,32 +413,37 @@ class EstimatorChangingGroupMM(object):
 				for i in ghats[t+1]:
 					if ghats[t+1][i] == l:
 						Shat[(l,t+1)].add(i)
-
-			print 'Stild', Stild
-			print 'Shat',Shat
+			if debug:
+				print 'Stild', Stild
+				print 'Shat',Shat
 
 			gtilds[t+1] = {}
 			M[t] = {}
 			for l1 in range(1, k+1):
 				for l2 in range(1, k+1):
-					print 'l1',l1, 'l2',l2
+					if debug:
+						print 'l1',l1, 'l2',l2
 					I = Stild[(l1,t)].intersection(Shat[(l2,t+1)])
-					print 'I',I
+					if debug:
+						print 'I',I
 					if len(I) > len(Stild[(l1,t)])*1.0/2:
-						print "found majority"
+						if debug:
+							print "found majority"
 						for i in Shat[(l2,t+1)]:
 								gtilds[t+1][i]=l1
 						for i in Stild[(l1,t)].difference(I):
 								M[t][i]=0
 						for i in I:
 							M[t][i] = 1
-						print 'gtilds[t+1]', gtilds[t+1]
-						print 'M[t]',M[t]
+						if debug:
+							print 'gtilds[t+1]', gtilds[t+1]
+							print 'M[t]',M[t]
 						break
-			print 'gtilds at t+1 =',t+1,' is ',gtilds[t+1]
+			if debug:
+				print 'gtilds at t+1 =',t+1,' is ',gtilds[t+1]
 		return gtilds,M
 
-	def maj_xiw_model_estimate_xiw(self, w_hats,r,s,gfinals,mfinals,GT, M, debug=False):
+	def maj_xiw_model_estimate_xiw(self, w_hats, gfinals, mfinals,GT, M, debug=False):
 
 		def scoring(xivar, wvar,r,s,M, gtildes, GT,t,k):
 			wbar=0
@@ -485,8 +493,7 @@ class EstimatorChangingGroupMM(object):
 					temp5=temp5+temp4*np.power(xivar,t-u-1)
 			temp5=temp5*(1-xivar)*wvar
 
-
-		return temp1+temp3+temp5
+			return temp1+temp3+temp5
 
 
 
@@ -547,52 +554,69 @@ class EstimatorChangingGroupMM(object):
 		return np.mean(muopt_array),np.mean(wopt_array)
 		return NotImplementedError
 
+		wintermediate = np.zeros((k,k))
+		xiintermediate = np.zeros((k,k))
+		for r in range(1,k+1):
+			for s in range(1,k+1):
+				xiintermediate[r-1,s-1],wintermediate[r-1,s-1] = self.maj_xiw_model_estimate_xiw_sub(w_hats,r,s,gfinals,mfinals,GT,debug=False)
+		xifinal = np.mean(xiintermediate)
+		off_diagonal = np.mean(np.extract(1 - np.eye(k), wintermediate))
+		on_diagonal = np.mean(np.extract(np.eye(k), wintermediate))
+		wfinal = off_diagonal*np.ones((k,k))
+		for r in range(k):
+			wfinal[r,r] = on_diagonal
+
+		return wfinal,xifinal
+
 	def estimate_params(self, GT, k=2, W=np.eye(2), xi=1, debug=False):
 
-		flag_estimate_ghats = False #True
-		flag_estimate_g_m   = True
-		flag_estimate_w_and_xi = False  # False
+		flag_estimate_ghats 				= False #True
+		flag_estimate_gfinals_mfinals   	= True
+		flag_estimate_what 					= True
+		flag_estimate_wfinal_and_xifinal 	= True  #False
 
+		#Initialization
 		ghats   = []
+		gfinals = None
+		mfinals = None
 		w_hats  = {}
 		for t in range(len(GT)):
 			ghats.append(None)
 			w_hats[t] = None
-		gfinals = None
-		mfinals = None
 		wfinal  = None
 		xifinal = 0
 		time0 = time.time()
-
 		if debug:
-			print 'Estimating groups, w, xi. Timing starts here.'
+			print '\tEstimating ghats, gfinals, mfinals, wfinal, xifinal. Timing starts here.'
 
+
+		# Step 1: Estimate communities for individual snapshots
 		if flag_estimate_ghats==True:
-			# Estimate communities for individual snapshots
 			for t, G in enumerate(GT):
 				# ghats.append(community.best_partition(G))
 				ghats[t] = EstimatorUtility().graph_tool_community(G, k)
 		else:
+			#Else copy the true groups as ghats
 			for t,G in enumerate(GT):
 				ghats[t] = {x[0]: x[1]['group'][0] for x in GT[t].nodes(data=True)}
 
 
-		if flag_estimate_g_m == False:
+		#Step 2: Estimate gfinals and majority minority labels for each t
+		if flag_estimate_gfinals_mfinals == True:
+			# Aggregate/Unify
+			gfinals,mfinals = self.get_permuted_groups_majority_info(ghats, k)
+		else:
 			gfinals = []
 			for t,G in enumerate(GT):
 				gfinals[t] = {x[0]: x[1]['group'][0] for x in GT[t].nodes(data=True)}
 
-			# #True Majority/Minority computed here TBD
-			# mfinals = {}
-			# for t,G in enumerate(GT):
-			# 	if t == 0:
-			# 		continue
-			# 	else:
-			# 		mfinals = None # TBD
-
-		else:
-			# Aggregate/Unify
-			gfinals,mfinals = self.get_permuted_groups_majority_info(ghats, k)
+			#True Majority/Minority computed here TBD
+			mfinals = {}
+			for t,G in enumerate(GT):
+				if t == 0:
+					continue
+				else:
+					mfinals = None # TBD
 
 		time1 = time.time() - time0
 		if debug:
@@ -601,10 +625,9 @@ class EstimatorChangingGroupMM(object):
 				print '\tsnapshot', t,' gfinal', gfinals[t]
 				print '\tsnapshot', t,' mfinal', mfinals[t]
 
-		if flag_estimate_w_and_xi == False:
-			wfinal = W #copying the ground truth
-			xifinal = xi #copying the ground truth
-		else:
+
+		#Step 3: Estimate whats
+		if flag_estimate_what == True:
 			# Estimate w_hat_t_r_s
 			w_hats = {}
 			for t, G in enumerate(GT):
@@ -612,6 +635,13 @@ class EstimatorChangingGroupMM(object):
 				for r in range(1, k + 1):
 					for s in range(1, k + 1):
 						w_hats[t][r - 1, s - 1] = EstimatorFixedGroupLazy().estimate_w_mle(G, r, s, gfinals[t])
+		else:
+			w_hats = {}
+			for t, G in enumerate(GT):
+				w_hats[t] = np.zeros((k, k))
+				for r in range(1, k + 1):
+					for s in range(1, k + 1):
+						w_hats[t][r - 1, s - 1] = None #TBD
 
 		time2 = time.time()- time0
 		if debug:
@@ -619,37 +649,33 @@ class EstimatorChangingGroupMM(object):
 				print '\n\t w_hats',t,w_hats[t-1]
 
 
-			#Estimate wfinal and xifinal
-			if debug:
-				print '\tEstimating w and xi starts at time',time2
-			wintermediate = np.zeros((k,k))
-			xiintermediate = np.zeros((k,k))
-			for r in range(1,k+1):
-				for s in range(1,k+1):
-					xiintermediate[r-1,s-1],wintermediate[r-1,s-1] = self.maj_xiw_model_estimate_xiw(w_hats,r,s,gfinals,mfinals,GT,debug=False)
-			xifinal = np.mean(xiintermediate)
-			off_diagonal = np.mean(np.extract(1 - np.eye(k), wintermediate))
-			on_diagonal = np.mean(np.extract(np.eye(k), wintermediate))
-			wfinal = off_diagonal*np.ones((k,k))
-			for r in range(k):
-				wfinal[r,r] = on_diagonal
-
-
+		#Step 4: Estimate wfinal and xifinal
+		if debug:
+			print '\tEstimating w and xi starts at time',time2
+		if flag_estimate_wfinal_and_xifinal == True:
+			wfinal,xifinal = self.maj_xiw_model_estimate_xiw(w_hats,gfinals,mfinals,GT,debug=False)
+		else:
+			wfinal = W #copying the ground truth
+			xifinal = xi #copying the ground truth
 		time3 = time.time()-time0
 		if debug:
-			print '\tEstimating w and xi ends at time',time3
+			print '\tEstimating wfinal and xifinal ends at time',time3
 			print '\txifinal', xifinal
 			print '\twfinal', wfinal
 
-		print ghats
-		print gfinals
-		print mfinals
-		for t in range(len(GT)):
-			print '\tsnapshot', t,' ghat  ', ghats[t]
-			print '\tsnapshot', t,' gfinal', gfinals[t]
-			if t==len(GT)-1:
-				continue
-			print '\tsnapshot', t,' mfinal', mfinals[t]
+		debug=True
+		if debug:
+			print ghats
+			print gfinals
+			print mfinals
+			for t in range(len(GT)):
+				print '\tsnapshot', t,' ghat  ', ghats[t]
+			for t in range(len(GT)):
+				print '\tsnapshot', t,' gfinal', gfinals[t]
+			for t in range(len(GT)):
+				if t==len(GT)-1:
+					continue
+				print '\tsnapshot', t,' mfinal', mfinals[t]
 			
 		return ghats,gfinals,mfinals,w_hats,wfinal,xifinal,[time1,time2,time3]
 

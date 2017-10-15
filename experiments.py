@@ -78,7 +78,7 @@ def run_experiment_fixed_group_lazy():
 		print "  Run funish time:", time.time()-start_time
 
 		print 'Saving a log of the experiment. This will be overwritten.'
-		pickle.dump({'log':log,'params':params},open('explog.pkl','wb'))
+		pickle.dump({'log':log,'params':params},open('explog_fixed_lazy.pkl','wb'))
 		print 'Experiment end time:', time.time()-start_time
 
 def run_experiment_fixed_group_bernoulli():
@@ -118,7 +118,7 @@ def run_experiment_fixed_group_bernoulli():
 		print "  Run funish time:", time.time()-start_time
 
 		print 'Saving a log of the experiment. This will be overwritten.'
-		pickle.dump({'log':log,'params':params},open('explog_bernoulli.pkl','wb'))
+		pickle.dump({'log':log,'params':params},open('explog_fixed_bernoulli.pkl','wb'))
 		print 'Experiment end time:', time.time()-start_time
 
 def run_experiment_changing_group_MM():
@@ -162,7 +162,7 @@ def run_experiment_changing_group_MM():
 		print "  Run funish time:", time.time()-start_time
 
 		print 'Saving a log of the experiment. This will be overwritten.'
-		pickle.dump({'log':log,'params':params},open('explog_mm.pkl','wb'))
+		pickle.dump({'log':log,'params':params},open('explog_changing_mm.pkl','wb'))
 		print 'Experiment end time:', time.time()-start_time
 
 if __name__=='__main__':

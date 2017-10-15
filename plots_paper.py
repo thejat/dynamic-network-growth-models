@@ -109,37 +109,7 @@ def plot_changing_mm():
 	title='Estimation of Xi'
 	plot_error_vs_time(error,time,title)
 
-def plot_changing_mm1():
-	rawdata = pickle.load(open('explog_changing_mm.pkl','rb'))
-	log= rawdata['log']
-	params = rawdata['params']
-
-	ts_meanw = [np.zeros((params['k'],params['k'])) for t in range(params['total_time']-1)]
-	ts_meanxi = [0 for t in range(params['total_time']-1)]
-	for t in range(params['total_time']-1):
-		for mcrun in range(1):
-			ts_meanw[t] += log[mcrun]['wfinals'][t]
-			ts_meanxi[t] += log[mcrun]['xifinals'][t]
-
-		ts_meanw[t] = ts_meanw[t]*1.0/params['n_mcruns']
-		ts_meanxi[t] = ts_meanxi[t]*1.0/params['n_mcruns']
-
-	print 'mean w as a function of t'
-	pprint.pprint(ts_meanw)
-	print 'mean xi as a function of t'
-	pprint.pprint(ts_meanxi)
-	
-	error = [np.linalg.norm(params['Wtrue']-x,'fro') for x in ts_meanw]
-	time = range(1,params['total_time'])
-	title='Estimation of W'
-	plot_error_vs_time(error,time,title)
-	error = [abs(params['xitrue']-x) for x in ts_meanxi]
-	time = range(1,params['total_time'])
-	title='Estimation of Xi'
-	plot_error_vs_time(error,time,title)
-
-
 if __name__ == '__main__':
-	# plot_fixed_lazy()
-	# plot_fixed_bernoulli()
+	plot_fixed_lazy()
+	plot_fixed_bernoulli()
 	plot_changing_mm()

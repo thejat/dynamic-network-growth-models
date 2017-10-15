@@ -126,13 +126,13 @@ def run_experiment_fixed_group_bernoulli():
 def run_experiment_changing_group_MM():
 	debug = False
 	params = {}
-	params['n_mcruns'] 		=     5
-	params['total_time'] 	=    15
-	params['xitrue'] 		=    .4
-	params['Wtrue'] 		= np.array([[.65,.1],[.1,0.65]])#[[1,.0],[.0,1]])
+	params['n_mcruns'] 		=      8
+	params['total_time'] 	=     16
+	params['xitrue'] 		=     .5
+	params['Wtrue'] 		= np.array([[.7,.2],[.2,0.7]])
 	params['k'] 			= params['Wtrue'].shape[0]
-	params['n'] 			=    10
-	params['minority_pct_ub'] = 0.2
+	params['n'] 			=     16
+	params['minority_pct_ub'] = 0.25
 	start_time = time.time()
 
 	def save_estimates(params):
@@ -176,7 +176,7 @@ if __name__=='__main__':
 	# run_experiment_fixed_group_lazy()
 
 	#Fixed group Bernoulli
-	run_experiment_fixed_group_bernoulli()
+	# run_experiment_fixed_group_bernoulli()
 
 	#Majority/Minority model
-	# run_experiment_changing_group_MM()
+	run_experiment_changing_group_MM()

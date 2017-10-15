@@ -273,12 +273,12 @@ class EstimatorFixedGroupLazy(object):
 #Proposed Estimator for the Fixed Group Bernoulli Model
 class EstimatorFixedGroupBernoulli(object):
 
-	def muw_model_estimate_muw(self, whats, r, s, gfinal,GT, debug=False):
+	def muw_model_estimate_muw(self, w_hats, r, s, gfinal,GT, debug=False):
 
-		def scoring(muvar, wvar, whats,r,s,gfinal, GT,t):
+		def scoring(muvar, wvar, w_hats,r,s,gfinal, GT,t):
 			return np.power((np.power(1- muvar*(1+wvar),(t-1))*wvar \
 				+ wvar*(1-np.power(1-muvar*(1+wvar),(t-1)))/(1+wvar) \
-				- whats[t][r-1,s-1]),2)
+				- w_hats[t][r-1,s-1]),2)
 
 		grid_pts = np.linspace(0, 1, 41)
 		muopt_array = []
@@ -290,7 +290,7 @@ class EstimatorFixedGroupBernoulli(object):
 			muopt,wopt = grid_pts[0], grid_pts[0]
 			for i,muvar in enumerate(grid_pts):
 				for j,wvar in enumerate(grid_pts):
-					candidate_score = scoring(muvar, wvar,whats,r,s,gfinal,GT,t)
+					candidate_score = scoring(muvar, wvar,w_hats,r,s,gfinal,GT,t)
 					score_log[i,j] = candidate_score
 					if np.isnan(candidate_score):
 						continue
@@ -387,7 +387,7 @@ class EstimatorFixedGroupBernoulli(object):
 # Proposed Estimator for the Majority Lazy Model
 class EstimatorChangingGroupMM(object):
 
-	def get_permuted_groups_majority_info(self, ghats, k, debug=False):
+	def get_permuted_groups_majority_info(self, ghats, k, debug=True):
 
 		if debug:
 			print ghats[0]
@@ -401,7 +401,7 @@ class EstimatorChangingGroupMM(object):
 		Shat = {}
 		for t in range(0, len(ghats)-1):
 			if debug:
-				print "t",t
+				print "\tt",t
 			for l in range(1, k+1):
 
 				Stild[(l,t)] = set()
@@ -414,21 +414,23 @@ class EstimatorChangingGroupMM(object):
 					if ghats[t+1][i] == l:
 						Shat[(l,t+1)].add(i)
 			if debug:
-				print 'Stild', Stild
-				print 'Shat',Shat
+				print '\t\t ghat at t  ',ghats[t]
+				print '\t\t ghat at t+1',ghats[t+1]
+				print '\t\t Stild', Stild
+				print '\t\t Shat',Shat
 
 			gtilds[t+1] = {}
 			M[t] = {}
 			for l1 in range(1, k+1):
 				for l2 in range(1, k+1):
 					if debug:
-						print 'l1',l1, 'l2',l2
+						print '\t\tl1 ',l1, 'l2 ',l2
 					I = Stild[(l1,t)].intersection(Shat[(l2,t+1)])
 					if debug:
-						print 'I',I
+						print '\t\tIntersection set: ',I
 					if len(I) > len(Stild[(l1,t)])*1.0/2:
 						if debug:
-							print "found majority"
+							print "\t\tFound majority. Updating gtilds, M"
 						for i in Shat[(l2,t+1)]:
 								gtilds[t+1][i]=l1
 						for i in Stild[(l1,t)].difference(I):
@@ -436,64 +438,57 @@ class EstimatorChangingGroupMM(object):
 						for i in I:
 							M[t][i] = 1
 						if debug:
-							print 'gtilds[t+1]', gtilds[t+1]
-							print 'M[t]',M[t]
+							print '\t\t\tgtilds[t+1]', gtilds[t+1]
+							print '\t\t\tM[t]       ', M[t]
 						break
 			if debug:
-				print 'gtilds at t+1 =',t+1,' is ',gtilds[t+1]
+				print '\t\tgtilds at t+1 =',t+1,' is ',gtilds[t+1]
 		return gtilds,M
 
-	def maj_xiw_model_estimate_xiw(self, w_hats, gfinals, mfinals,GT, M, debug=False):
+	def maj_xiw_model_estimate_xiw(self, w_hats, gfinals, mfinals,k, GT, ngridpoints=21, debug=False):
 
 
-		def scoring(xivar, avar, wbaropt, whats, gfinals, f, g, k, GT):
+		def scoring(xivar, avar, wbaropt, w_hats, gfinals, f, g, k, GT):
 			score = 0
 			for t in range(1,len(GT)):
-				for r in range(1,k+1):
-					for s in range(1,k+1):
-						rcount,scount = 0,0
-						for x in GT[t].nodes():
-							if gfinals[t][x]==r:
-								rcount += 1
-							if gfinals[t][x]==s:
-								scount += 1
-						if r==s:
-							scount = scount - 1 # in this case the mle is 2*number fo edges/((no of nodes)(no of nodes - 1))
+				for i in GT[t].nodes():
+					for j in GT[t].nodes():
+						if gfinals[t][i]==gfinals[t][j]:
 							multiplier = avar*k*wbaropt + (1-avar)*wbaropt
 						else:
 							multiplier = (1-avar)*wbaropt
 
-						term1 = 0
-						term2 = 0
-						term3 = 0
-
 						# term1
+						term1 = 0
 						for u in range(1, t):
+							term1temp = 1
 							for v in range(u+1,t):
-								temp2=temp2* g[v][i-1,j-1]
-								temp1=temp1+temp2*np.power(xivar,t-u)*f[u][i-1,j-1]
+								term1temp *= g[v][i-1,j-1]
+							term1+= term1temp*np.power(xivar,t-u)*f[u][i-1,j-1]
 						
 						# term2
-						for u in range(1,t)
-							temp3=temp3*g[t][i,j]
-						temp3=temp3*np.power(xivar,(t-1))*wvar
+						term2 = 1
+						for u in range(1,t):
+							term2 *= g[u][i-1,j-1]
+						term2=term2*np.power(xivar,t-1)*multiplier
 
 						# term3
+						term3 = 0
 						for u in range(1, t):
-								for v in range(u+1,t):
-									temp4=temp4* g[v][i-1,j-1]
-								temp5=temp5+temp4*np.power(xivar,t-u-1)
-						temp5=temp5*(1-xivar)*wvar
+							term3temp = 1
+							for v in range(u+1,t):
+								term3temp *= g[v][i-1,j-1]
+							term3 += term3temp*np.power(xivar,t-u-1)*(1-xivar)*multiplier
 
-						score += rcount*scount*np.power(whats[t][r-1,s-1] - term1 - term2 - term3,2)
+						score += np.power(w_hats[t][gfinals[t][i]-1,gfinals[t][j]-1] - term1 - term2 - term3,2)
 
-			return temp1+temp3+temp5
+			return score
 
 
 		#Step: Estimate wbaropt via averaging
 		wbaropt = 0
 		for t in range(len(GT)):
-			wbaropt += np.mean(whats[t])
+			wbaropt += np.mean(w_hats[t])
 		wbaropt = wbaropt*1.0/len(GT)
 
 		#Step: Compute f,g intermediate quantities needed for Gridsearch
@@ -517,20 +512,20 @@ class EstimatorChangingGroupMM(object):
 					+ (1-mfinals[t][i])*(1-mfinals[t][j])*1.0/np.power((k-1),2)
 
 		#Step: Gridsearch xiopt,aopt
-		grid_pts = np.linspace(0, 1, 11)
+		grid_pts = np.linspace(0, 1, ngridpoints)
 		score_log = np.zeros((len(grid_pts),len(grid_pts)))
 		current_min = 1e8 #Potential bug
 		xiopt,aopt = grid_pts[0],grid_pts[0]
-			for ix1,xivar in enumerate(grid_pts):
-				for ix2,avar in enumerate(grid_pts):
-					candidate_score = scoring(xivar, avar, wbaropt, whats, gfinals, f, g, k, GT)
-					score_log[ix1,ix2,ix3] = candidate_score
-					if np.isnan(candidate_score):
-						continue
-					if candidate_score <= current_min:
-						xiopt = xivar
-						aopt = avar
-						current_min = candidate_score
+		for ix1,xivar in enumerate(grid_pts):
+			for ix2,avar in enumerate(grid_pts):
+				candidate_score = scoring(xivar, avar, wbaropt, w_hats, gfinals, f, g, k, GT)
+				score_log[ix1,ix2] = candidate_score
+				if np.isnan(candidate_score):
+					continue
+				if candidate_score <= current_min:
+					xiopt = xivar
+					aopt = avar
+					current_min = candidate_score
 		if debug:
 			print 'xiopt',xiopt
 			print 'aopt',aopt
@@ -538,8 +533,6 @@ class EstimatorChangingGroupMM(object):
 
 		#Step: Return wfinal and xifinal
 		xifinal = xiopt #redundant
-		for r in range(1,k+1):
-			for s in range(1,k+1):
 		off_diagonal = (1-aopt)*wbaropt
 		wfinal = off_diagonal*np.ones((k,k))
 		for r in range(k):
@@ -551,8 +544,8 @@ class EstimatorChangingGroupMM(object):
 
 		flag_estimate_ghats 				= False #True
 		flag_estimate_gfinals_mfinals   	= True
-		flag_estimate_what 					= True
-		flag_estimate_wfinal_and_xifinal 	= False  #False
+		flag_estimate_w_hats 				= True
+		flag_estimate_wfinal_and_xifinal 	= True  #False
 
 		#Initialization
 		ghats   = []
@@ -602,11 +595,13 @@ class EstimatorChangingGroupMM(object):
 			for t in range(len(GT)):
 				print '\tsnapshot', t,' ghat  ', ghats[t]
 				print '\tsnapshot', t,' gfinal', gfinals[t]
+				if t==len(GT)-1:
+					continue
 				print '\tsnapshot', t,' mfinal', mfinals[t]
 
 
-		#Step 3: Estimate whats
-		if flag_estimate_what == True:
+		#Step 3: Estimate w_hats
+		if flag_estimate_w_hats == True:
 			# Estimate w_hat_t_r_s
 			w_hats = {}
 			for t, G in enumerate(GT):
@@ -632,7 +627,7 @@ class EstimatorChangingGroupMM(object):
 		if debug:
 			print '\tEstimating w and xi starts at time',time2
 		if flag_estimate_wfinal_and_xifinal == True:
-			wfinal,xifinal = self.maj_xiw_model_estimate_xiw(w_hats,gfinals,mfinals,GT,debug=False)
+			wfinal,xifinal = self.maj_xiw_model_estimate_xiw(w_hats,gfinals,mfinals,k,GT,debug=False)
 		else:
 			wfinal = W #copying the ground truth
 			xifinal = xi #copying the ground truth
@@ -642,7 +637,6 @@ class EstimatorChangingGroupMM(object):
 			print '\txifinal', xifinal
 			print '\twfinal', wfinal
 
-		debug=True
 		if debug:
 			# print ghats
 			# print gfinals
@@ -655,6 +649,8 @@ class EstimatorChangingGroupMM(object):
 				if t==len(GT)-1:
 					continue
 				print '\tsnapshot', t,' mfinal', mfinals[t]
+			print '\txifinal', xifinal
+			print '\twfinal', wfinal
 			
 		return ghats,gfinals,mfinals,w_hats,wfinal,xifinal,[time1,time2,time3]
 

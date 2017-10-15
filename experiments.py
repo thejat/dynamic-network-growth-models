@@ -84,12 +84,12 @@ def run_experiment_fixed_group_lazy():
 def run_experiment_fixed_group_bernoulli():
 	debug = False
 	params = {}
-	params['n_mcruns'] 		=   1
+	params['n_mcruns'] 		=   2
 	params['total_time'] 	=  12
-	params['Mutrue'] 		=  np.array([[.5,.5],[.2,.6]])
+	params['Mutrue'] 		= np.array([[.5,.5],[.2,.6]])
 	params['Wtrue'] 		= np.array([[.7,.1],[.1,.7]])#[[1,.0],[.0,1]])# #np.random.rand(k,k)
 	params['k'] 			= params['Wtrue'].shape[0]
-	params['n'] 			=  30
+	params['n'] 			=  16
 	start_time = time.time()
 
 	def save_estimates(params):
@@ -124,13 +124,13 @@ def run_experiment_fixed_group_bernoulli():
 def run_experiment_changing_group_MM():
 	debug = False
 	params = {}
-	params['n_mcruns'] 		=     1
-	params['total_time'] 	=     5
-	params['xitrue'] 		=     0
+	params['n_mcruns'] 		=     5
+	params['total_time'] 	=    15
+	params['xitrue'] 		=    .4
 	params['Wtrue'] 		= np.array([[.65,.1],[.1,0.65]])#[[1,.0],[.0,1]])
 	params['k'] 			= params['Wtrue'].shape[0]
-	params['n'] 			=     8
-	params['minority_pct_ub'] =   0.2
+	params['n'] 			=    10
+	params['minority_pct_ub'] = 0.2
 	start_time = time.time()
 
 	def save_estimates(params):

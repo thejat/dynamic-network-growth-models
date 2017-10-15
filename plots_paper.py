@@ -110,6 +110,6 @@ def plot_changing_mm():
 	plot_error_vs_time(error,time,title)
 
 if __name__ == '__main__':
-	plot_fixed_lazy()
+	# plot_fixed_lazy()
 	# plot_fixed_bernoulli()
-	# plot_changing_mm()
+	plot_changing_mm()

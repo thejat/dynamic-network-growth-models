@@ -44,13 +44,13 @@ def run_experiment_Zhang_modelA_modified():
 def run_experiment_fixed_group_lazy():
 	debug = False
 	params = {}
-	params['n_mcruns'] 		=    2
-	params['total_time'] 	=   24
-	params['xitrue'] 		=   .5
-	params['Wtrue'] 		= np.array([[.65,.1],[.1,0.5]])#[[1,.0],[.0,1]])# #np.random.rand(k,k)
+	params['n_mcruns'] 		=   10
+	params['total_time'] 	=   50
+	params['xitrue'] 		=   .2
+	params['Wtrue'] 		= np.array([[.8,.2],[.2,.8]])#[[1,.0],[.0,1]])# #np.random.rand(k,k)
 	params['k'] 			= params['Wtrue'].shape[0]
-	params['n'] 			=   24
-	params['ngridpoints']	=   41
+	params['n'] 			=  100
+	params['ngridpoints']	=   21
 	start_time = time.time()
 
 	def save_estimates(params):
@@ -86,12 +86,12 @@ def run_experiment_fixed_group_bernoulli():
 	debug = False
 	params = {}
 	params['n_mcruns'] 		=  10
-	params['total_time'] 	=  16
+	params['total_time'] 	=  50
 	params['Mutrue'] 		= np.array([[.5,.5],[.2,.6]])
 	params['Wtrue'] 		= np.array([[.7,.1],[.1,.7]])#[[1,.0],[.0,1]])# #np.random.rand(k,k)
 	params['k'] 			= params['Wtrue'].shape[0]
-	params['n'] 			=  16
-	params['ngridpoints']	=  41
+	params['n'] 			= 100
+	params['ngridpoints']	=  21
 	start_time = time.time()
 
 	def save_estimates(params):
@@ -126,14 +126,14 @@ def run_experiment_fixed_group_bernoulli():
 def run_experiment_changing_group_MM():
 	debug = False
 	params = {}
-	params['n_mcruns'] 		=      1
-	params['total_time'] 	=     24
-	params['xitrue'] 		=      0
-	params['Wtrue'] 		= np.array([[.6,.1],[.1,.6]])
+	params['n_mcruns'] 		=     10
+	params['total_time'] 	=     50
+	params['xitrue'] 		=     .2
+	params['Wtrue'] 		= np.array([[.8,.2],[.2,.8]])
 	params['k'] 			= params['Wtrue'].shape[0]
-	params['n'] 			=     12
+	params['n'] 			=    100
 	params['minority_pct_ub'] = 0.25
-	params['ngridpoints']	=     11
+	params['ngridpoints']	=     21
 	start_time = time.time()
 
 	def save_estimates(params):
@@ -173,11 +173,11 @@ if __name__=='__main__':
 	#Zhang Model A Modified
 	# run_experiment_Zhang_modelA_modified()
 
+	#Majority/Minority model
+	run_experiment_changing_group_MM()
+
 	#Fixed Group Lazy
 	# run_experiment_fixed_group_lazy()
 
 	#Fixed group Bernoulli
 	# run_experiment_fixed_group_bernoulli()
-
-	#Majority/Minority model
-	run_experiment_changing_group_MM()

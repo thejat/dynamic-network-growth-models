@@ -32,7 +32,7 @@ def plot_fixed_lazy():
 	ts_meanw = [np.zeros((params['k'],params['k'])) for t in range(params['total_time']-1)]
 	ts_meanxi = [0 for t in range(params['total_time']-1)]
 	for t in range(params['total_time']-1):
-		for mcrun in range(params['n_mcruns']):
+		for mcrun in range(len(log)):
 			ts_meanw[t] += log[mcrun]['wfinals'][t]
 			ts_meanxi[t] += log[mcrun]['xifinals'][t]
 
@@ -61,7 +61,7 @@ def plot_fixed_bernoulli():
 	ts_meanw = [np.zeros((params['k'],params['k'])) for t in range(params['total_time']-1)]
 	ts_meanmu = [np.zeros((params['k'],params['k'])) for t in range(params['total_time']-1)]
 	for t in range(params['total_time']-1):
-		for mcrun in range(params['n_mcruns']):
+		for mcrun in range(len(log)):
 			ts_meanw[t] += log[mcrun]['wfinals'][t]
 			ts_meanmu[t] += log[mcrun]['mufinals'][t]
 
@@ -88,7 +88,7 @@ def plot_changing_mm():
 	ts_meanw = [np.zeros((params['k'],params['k'])) for t in range(params['total_time']-1)]
 	ts_meanxi = [0 for t in range(params['total_time']-1)]
 	for t in range(params['total_time']-1):
-		for mcrun in range(params['n_mcruns']):
+		for mcrun in range(len(log)):
 			ts_meanw[t] += log[mcrun]['wfinals'][t]
 			ts_meanxi[t] += log[mcrun]['xifinals'][t]
 
@@ -110,6 +110,6 @@ def plot_changing_mm():
 	plot_error_vs_time(error,time,title)
 
 if __name__ == '__main__':
-	plot_fixed_lazy()
+	# plot_fixed_lazy()
 	plot_fixed_bernoulli()
-	plot_changing_mm()
+	# plot_changing_mm()

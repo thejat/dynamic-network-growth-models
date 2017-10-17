@@ -41,15 +41,15 @@ def run_experiment_Zhang_modelA_modified():
 	print "True vals: lambda",lmbdTrue," mu",muTrue
 	print "Estimates: lambda",lmbd," mu ",mu
 
-def run_experiment_fixed_group_lazy():
+def run_experiment_fixed_group_lazy(fname):
 	debug = False
 	params = {}
 	params['n_mcruns'] 		=   10
-	params['total_time'] 	=   50
+	params['total_time'] 	=   12
 	params['xitrue'] 		=   .2
 	params['Wtrue'] 		= np.array([[.8,.2],[.2,.8]])#[[1,.0],[.0,1]])# #np.random.rand(k,k)
 	params['k'] 			= params['Wtrue'].shape[0]
-	params['n'] 			=  100
+	params['n'] 			=   31
 	params['ngridpoints']	=   21
 	start_time = time.time()
 
@@ -79,19 +79,19 @@ def run_experiment_fixed_group_lazy():
 		print "  Run funish time:", time.time()-start_time
 
 		print 'Saving a log of the experiment. This will be overwritten.'
-		pickle.dump({'log':log,'params':params},open('explog_fixed_lazy.pkl','wb'))
+		pickle.dump({'log':log,'params':params},open(fname,'wb'))
 		print 'Experiment end time:', time.time()-start_time
 
-def run_experiment_fixed_group_bernoulli():
+def run_experiment_fixed_group_bernoulli(fname):
 	debug = False
 	params = {}
 	params['n_mcruns'] 		=  10
-	params['total_time'] 	=  50
+	params['total_time'] 	=  20
 	params['Mutrue'] 		= np.array([[.5,.5],[.2,.6]])
 	params['Wtrue'] 		= np.array([[.7,.1],[.1,.7]])#[[1,.0],[.0,1]])# #np.random.rand(k,k)
 	params['k'] 			= params['Wtrue'].shape[0]
-	params['n'] 			= 100
-	params['ngridpoints']	=  21
+	params['n'] 			=  31
+	params['ngridpoints']	=  41
 	start_time = time.time()
 
 	def save_estimates(params):
@@ -120,10 +120,10 @@ def run_experiment_fixed_group_bernoulli():
 		print "  Run funish time:", time.time()-start_time
 
 		print 'Saving a log of the experiment. This will be overwritten.'
-		pickle.dump({'log':log,'params':params},open('explog_fixed_bernoulli.pkl','wb'))
+		pickle.dump({'log':log,'params':params},open(fname,'wb'))
 		print 'Experiment end time:', time.time()-start_time
 
-def run_experiment_changing_group_MM():
+def run_experiment_changing_group_MM(fname):
 	debug = False
 	params = {}
 	params['n_mcruns'] 		=     10
@@ -165,7 +165,7 @@ def run_experiment_changing_group_MM():
 		print "  Run funish time:", time.time()-start_time
 
 		print 'Saving a log of the experiment. This will be overwritten.'
-		pickle.dump({'log':log,'params':params},open('explog_changing_mm.pkl','wb'))
+		pickle.dump({'log':log,'params':params},open(fname,'wb'))
 		print 'Experiment end time:', time.time()-start_time
 
 if __name__=='__main__':
@@ -174,10 +174,10 @@ if __name__=='__main__':
 	# run_experiment_Zhang_modelA_modified()
 
 	#Majority/Minority model
-	run_experiment_changing_group_MM()
+	# run_experiment_changing_group_MM('explog_changing_mm.pkl')
 
 	#Fixed Group Lazy
-	# run_experiment_fixed_group_lazy()
+	# run_experiment_fixed_group_lazy('explog_fixed_lazy.pkl')
 
 	#Fixed group Bernoulli
-	# run_experiment_fixed_group_bernoulli()
+	run_experiment_fixed_group_bernoulli('explog_fixed_bernoulli.pkl')

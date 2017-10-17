@@ -119,11 +119,11 @@ class EstimatorFixedGroupLazy(object):
 						kappa += 1
 		return gfinal
 
-	def estimate_w_mle(self,G,r,s,gfinal,debug=True):
+	def estimate_w_mle(self,G,r,s,gfinal,debug=False):
 		rcount,scount,rscount = 0,0,0
 
-		# if debug:
-		# 	print 'gfinal',gfinal
+		if debug:
+			print 'gfinal',gfinal
 
 		temp_nodes = G.nodes()
 		temp_edges = G.edges()
@@ -133,6 +133,8 @@ class EstimatorFixedGroupLazy(object):
 				rcount += 1
 			if gfinal[x]==s:
 				scount += 1
+		if rcount<=0 or scount<=0:
+			return 0
 
 		for x in temp_nodes:
 			for y in temp_nodes:
@@ -140,16 +142,15 @@ class EstimatorFixedGroupLazy(object):
 					if (x,y) in temp_edges or (y,x) in temp_edges:
 						rscount += 1 #edge representations in networkx are directed
 
+		if debug:
+			print r,s,rcount,scount,rscount
 		if r==s:
-			scount = scount - 1 # in this case the mle is 2*number fo edges/((no of nodes)(no of nodes - 1))
-
-		# if debug:
-		# 	print r,s,rcount,scount,rscount
-
-		if rcount<=0 or scount<=0:
-			return 0
+			# in this case the mle is 2*number fo edges/((no of nodes)(no of nodes - 1)), 
+			# but we are already double counting rscount above
+			return rscount*1.0/(rcount*(scount - 1))
 		else:
-			return rscount*1.0/(rcount*scount)
+			return rscount*0.5/(rcount*scount)
+			
 
 	def xiw_model_estimate_w(self,w_hats,r,s,debug=False):
 
@@ -200,13 +201,13 @@ class EstimatorFixedGroupLazy(object):
 
 	def estimate_params(self,GT,k=2,W=np.eye(2),ngridpoints=21,debug=False):
 
-		flag_estimate_g  = False # False
+		flag_estimate_g  = True # False
 		flag_estimate_w  = True # False
 
-		ghats = []
+		ghats = {}
 		w_hats = {}
 		for t in range(len(GT)):
-			ghats.append(None)
+			ghats[t] = {}
 			w_hats[t] = None
 		gfinal = None
 
@@ -289,7 +290,7 @@ class EstimatorFixedGroupBernoulli(object):
 		muopt_array = []
 		wopt_array = []
 		score_log = np.zeros((len(grid_pts),len(grid_pts)))
-		print 'lenGT',len(GT)
+		# print 'lenGT',len(GT)
 		for t in range(1, len(GT)):
 			current_min = 1e8 #Potential bug
 			muopt,wopt = grid_pts[0], grid_pts[0]
@@ -311,15 +312,15 @@ class EstimatorFixedGroupBernoulli(object):
 			# 	pprint.pprint(score_log)
 		return np.mean(muopt_array),np.mean(wopt_array)
 
-	def estimate_params(self, GT, k=2, W=np.eye(2), Mu=np.eye(2), ngridpoints=21,debug=True):
+	def estimate_params(self, GT, k=2, W=np.eye(2), Mu=np.eye(2), ngridpoints=21,debug=False):
 
-		flag_estimate_g  = False # False
+		flag_estimate_g  = True # False
 		flag_estimate_w_and_mu  = True # False
 
-		ghats = []
+		ghats = {}
 		w_hats = {}
 		for t in range(len(GT)):
-			ghats.append(None)
+			ghats[t] = {}
 			w_hats[t] = None
 		gfinal = None
 		wfinal = None
@@ -928,3 +929,5 @@ if __name__=='__main__':
 		else:
 			ghats[2][i] = 2
 	gfinal = EstimatorFixedGroupLazy().unify_communities_LP(ghats,len(grps)) #,taus,Qs
+	print ghats
+	print gfinal

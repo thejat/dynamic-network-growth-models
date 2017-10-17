@@ -33,7 +33,7 @@ def plot_error_vs_time0(error,time,title):
 	ax.set_title(title)
 	plt.show()
 
-def plot_fixed_lazy(fname,debug=False):
+def plot_fixed_lazy(fname,debug=True):
 	rawdata = pickle.load(open(fname,'rb'))
 	log= rawdata['log']
 	params = rawdata['params']
@@ -52,14 +52,15 @@ def plot_fixed_lazy(fname,debug=False):
 			ts_meanxi[t] += log[mcrun]['xifinals'][t]
 			ts_errorw[t,mcrun] = np.linalg.norm(params['Wtrue']-log[mcrun]['wfinals'][t],'fro')
 			ts_errorxi[t,mcrun] = abs(params['xitrue']-log[mcrun]['xifinals'][t])
-		ts_meanw[t] = ts_meanw[t]*1.0/params['n_mcruns']
-		ts_meanxi[t] = ts_meanxi[t]*1.0/params['n_mcruns']
+		ts_meanw[t] = ts_meanw[t]*1.0/len(log)
+		ts_meanxi[t] = ts_meanxi[t]*1.0/len(log)
 	ts_errormeanw = np.mean(ts_errorw,axis=1)
 	ts_errorstdw = np.std(ts_errorw,axis=1)
 	ts_errormeanxi = np.mean(ts_errorxi,axis=1)
 	ts_errorstdxi = np.std(ts_errorxi,axis=1)
 
 	if debug:
+		print 'actual runs: ', len(log)
 		print 'mean w as a function of t'
 		pprint.pprint(ts_meanw)
 		print 'mean xi as a function of t'
@@ -90,8 +91,8 @@ def plot_fixed_bernoulli(fname,debug=False):
 			ts_meanmu[t] += log[mcrun]['mufinals'][t]
 			ts_errorw[t,mcrun] = np.linalg.norm(params['Wtrue']-log[mcrun]['wfinals'][t],'fro')
 			ts_errormu[t,mcrun] = np.linalg.norm(params['Mutrue']-log[mcrun]['mufinals'][t],'fro')
-		ts_meanw[t] = ts_meanw[t]*1.0/params['n_mcruns']
-		ts_meanmu[t] = ts_meanmu[t]*1.0/params['n_mcruns']
+		ts_meanw[t] = ts_meanw[t]*1.0/len(log)
+		ts_meanmu[t] = ts_meanmu[t]*1.0/len(log)
 
 	ts_errormeanw = np.mean(ts_errorw,axis=1)
 	ts_errorstdw = np.std(ts_errorw,axis=1)
@@ -108,10 +109,10 @@ def plot_fixed_bernoulli(fname,debug=False):
 	plot_error_vs_time(ts_errormeanw,time,title,ts_errorstdw)
 	title='Estimation of Mu'
 	plot_error_vs_time(ts_errormeanmu,time,title,ts_errorstdmu)
-	plot_error_vs_time([x[0,0] for x in ts_meanmu],time,title)
-	plot_error_vs_time([x[0,1] for x in ts_meanmu],time,title)
-	plot_error_vs_time([x[1,0] for x in ts_meanmu],time,title)
-	plot_error_vs_time([x[1,1] for x in ts_meanmu],time,title)
+	# plot_error_vs_time([x[0,0] for x in ts_meanmu],time,title)
+	# plot_error_vs_time([x[0,1] for x in ts_meanmu],time,title)
+	# plot_error_vs_time([x[1,0] for x in ts_meanmu],time,title)
+	# plot_error_vs_time([x[1,1] for x in ts_meanmu],time,title)
 
 def plot_changing_mm(fname,debug=False):
 	rawdata = pickle.load(open(fname,'rb'))
@@ -125,8 +126,8 @@ def plot_changing_mm(fname,debug=False):
 			ts_meanw[t] += log[mcrun]['wfinals'][t]
 			ts_meanxi[t] += log[mcrun]['xifinals'][t]
 
-		ts_meanw[t] = ts_meanw[t]*1.0/params['n_mcruns']
-		ts_meanxi[t] = ts_meanxi[t]*1.0/params['n_mcruns']
+		ts_meanw[t] = ts_meanw[t]*1.0/len(log)
+		ts_meanxi[t] = ts_meanxi[t]*1.0/len(log)
 
 	print 'mean w as a function of t'
 	pprint.pprint(ts_meanw)
@@ -143,6 +144,6 @@ def plot_changing_mm(fname,debug=False):
 	plot_error_vs_time(error,time,title)
 
 if __name__ == '__main__':
-	plot_fixed_lazy('explog_fixed_lazy2.pkl')
-	# plot_fixed_bernoulli('explog_fixed_bernoulli.pkl')
+	# plot_fixed_lazy('explog_fixed_lazy_comm.pkl')
+	plot_fixed_bernoulli('explog_fixed_bernoulli.pkl')
 	# plot_changing_mm('explog_changing_mm.pkl')

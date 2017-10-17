@@ -33,8 +33,8 @@ def plot_error_vs_time0(error,time,title):
 	ax.set_title(title)
 	plt.show()
 
-def plot_fixed_lazy(debug=False):
-	rawdata = pickle.load(open('explog_fixed_lazy.pkl','rb'))
+def plot_fixed_lazy(fname,debug=False):
+	rawdata = pickle.load(open(fname,'rb'))
 	log= rawdata['log']
 	params = rawdata['params']
 
@@ -71,8 +71,8 @@ def plot_fixed_lazy(debug=False):
 	title='Estimation of Xi'
 	plot_error_vs_time(ts_errormeanxi,time,title,ts_errorstdxi)
 
-def plot_fixed_bernoulli(debug=False):
-	rawdata = pickle.load(open('explog_fixed_bernoulli.pkl','rb'))
+def plot_fixed_bernoulli(fname,debug=False):
+	rawdata = pickle.load(open(fname,'rb'))
 	log= rawdata['log']
 	params = rawdata['params']
 
@@ -113,8 +113,8 @@ def plot_fixed_bernoulli(debug=False):
 	plot_error_vs_time([x[1,0] for x in ts_meanmu],time,title)
 	plot_error_vs_time([x[1,1] for x in ts_meanmu],time,title)
 
-def plot_changing_mm():
-	rawdata = pickle.load(open('explog_changing_mm.pkl','rb'))
+def plot_changing_mm(fname,debug=False):
+	rawdata = pickle.load(open(fname,'rb'))
 	log= rawdata['log']
 	params = rawdata['params']
 
@@ -143,6 +143,6 @@ def plot_changing_mm():
 	plot_error_vs_time(error,time,title)
 
 if __name__ == '__main__':
-	# plot_fixed_lazy()
-	plot_fixed_bernoulli()
-	# plot_changing_mm()
+	plot_fixed_lazy('explog_fixed_lazy2.pkl')
+	# plot_fixed_bernoulli('explog_fixed_bernoulli.pkl')
+	# plot_changing_mm('explog_changing_mm.pkl')

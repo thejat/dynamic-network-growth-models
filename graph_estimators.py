@@ -483,9 +483,10 @@ class EstimatorChangingGroupMM(object):
 
 		def scoring(xivar, avar, wbaropt, w_hats, gfinals, f, g, k, GT):
 			score = 0
+			temp_nodes = GT[0].nodes()
 			for t in range(1,len(GT)):
-				for i in GT[t].nodes():
-					for j in GT[t].nodes():
+				for i in temp_nodes:
+					for j in temp_nodes:
 						if i < j:
 							if gfinals[t][i]==gfinals[t][j]:
 								multiplier = avar*k*wbaropt + (1-avar)*wbaropt
@@ -526,24 +527,35 @@ class EstimatorChangingGroupMM(object):
 		wbaropt = wbaropt*1.0/len(GT)
 
 		#Step: Compute f,g intermediate quantities needed for Gridsearch
+		temp_nodes = GT[0].nodes()
 		f={}
 		for t in range(len(GT)-1):
-			f[t] = np.zeros((len(GT[t].nodes()), len(GT[t].nodes())))
-			for i in GT[t].nodes():
-				for j in GT[t].nodes():
-					f[t][i-1,j-1]= mfinals[t][i]*(1-mfinals[t][j])*k*wbaropt*1.0/(k-1)\
-						+ (1-mfinals[t][i])*mfinals[t][j]*k*wbaropt*1.0/(k-1)\
-						+ (1-mfinals[t][i])*(1-mfinals[t][j])*wbaropt*(np.power(k,2)-2*k)*1.0/np.power(k-1,2)
+			f[t] = np.zeros((len(temp_nodes), len(temp_nodes)))
+			for i in temp_nodes:
+				for j in temp_nodes:
+					if i < j:
+						f[t][i-1,j-1]= mfinals[t][i]*(1-mfinals[t][j])*k*wbaropt*1.0/(k-1)\
+							+ (1-mfinals[t][i])*mfinals[t][j]*k*wbaropt*1.0/(k-1)\
+							+ (1-mfinals[t][i])*(1-mfinals[t][j])*wbaropt*(np.power(k,2)-2*k)*1.0/np.power(k-1,2)
 
 		g = {}
 		for t in range(len(GT)-1):
-			g[t] = np.zeros((len(GT[t].nodes()), len(GT[t].nodes())))
-			for i in GT[t].nodes():
-				for j in GT[t].nodes():
-					g[t][i - 1, j - 1] = mfinals[t][i]*mfinals[t][j] \
-					- mfinals[t][i]*(1-mfinals[t][j])*1.0/(k-1) \
-					- (1-mfinals[t][i])*mfinals[t][j]*1.0/(k-1) \
-					+ (1-mfinals[t][i])*(1-mfinals[t][j])*1.0/np.power((k-1),2)
+			g[t] = np.zeros((temp_nodes), len(temp_nodes))
+			for i in temp_nodes:
+				for j in temp_nodes:
+					if i < j:
+						g[t][i - 1, j - 1] = mfinals[t][i]*mfinals[t][j] \
+						- mfinals[t][i]*(1-mfinals[t][j])*1.0/(k-1) \
+						- (1-mfinals[t][i])*mfinals[t][j]*1.0/(k-1) \
+						+ (1-mfinals[t][i])*(1-mfinals[t][j])*1.0/np.power((k-1),2)
+		# gprod = {}
+		# for t in range(1,len(GT)):
+		# 	for u in range(t-1,-1,-1):
+		# 		gprod[(t,u)] = np.ones((temp_nodes), len(temp_nodes)) 
+		# 		for i in temp_nodes:
+		# 			for j in temp_nodes:
+		# 				if i < j:
+		# 					gprod[(t,u)][i-1,j-1] = gprod[(t,u+1)][i-1,j-1]*g[u][i-1,j-1]
 
 		#Step: Gridsearch xiopt,aopt
 		grid_pts = np.linspace(0, 1, ngridpoints)

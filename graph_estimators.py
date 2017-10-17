@@ -125,16 +125,19 @@ class EstimatorFixedGroupLazy(object):
 		# if debug:
 		# 	print 'gfinal',gfinal
 
-		for x in G.nodes():
+		temp_nodes = G.nodes()
+		temp_edges = G.edges()
+
+		for x in temp_nodes:
 			if gfinal[x]==r:
 				rcount += 1
 			if gfinal[x]==s:
 				scount += 1
 
-		for x in G.nodes():
-			for y in G.nodes():
+		for x in temp_nodes:
+			for y in temp_nodes:
 				if (gfinal[x] ==r and gfinal[y]==s) or (gfinal[x] ==s and gfinal[y]==r):
-					if (x,y) in G.edges() or (y,x) in G.edges():
+					if (x,y) in temp_edges or (y,x) in temp_edges:
 						rscount += 1 #edge representations in networkx are directed
 
 		if r==s:
@@ -163,14 +166,16 @@ class EstimatorFixedGroupLazy(object):
 			score = 0
 			nodes = GT[0].nodes()
 			for t in range(2,len(GT)+1):
+				temp_edges1 = GT[t-1].edges()
+				temp_edges2 = GT[t-2].edges()
 				for i in nodes:
 					for j in nodes:
 						if i < j:
-							if (i,j) in GT[t-1].edges():
+							if (i,j) in temp_edges1:
 								current_edge = 1
 							else:
 								current_edge = 0
-							if (i,j) in GT[t-2].edges():
+							if (i,j) in temp_edges2:
 								previous_edge = 1
 							else:
 								previous_edge = 0
@@ -481,34 +486,35 @@ class EstimatorChangingGroupMM(object):
 			for t in range(1,len(GT)):
 				for i in GT[t].nodes():
 					for j in GT[t].nodes():
-						if gfinals[t][i]==gfinals[t][j]:
-							multiplier = avar*k*wbaropt + (1-avar)*wbaropt
-						else:
-							multiplier = (1-avar)*wbaropt
+						if i < j:
+							if gfinals[t][i]==gfinals[t][j]:
+								multiplier = avar*k*wbaropt + (1-avar)*wbaropt
+							else:
+								multiplier = (1-avar)*wbaropt
 
-						# term1
-						term1 = 0
-						for u in range(1, t):
-							term1temp = 1
-							for v in range(u+1,t):
-								term1temp *= g[v][i-1,j-1]
-							term1+= term1temp*np.power(xivar,t-u)*f[u][i-1,j-1]
-						
-						# term2
-						term2 = 1
-						for u in range(1,t):
-							term2 *= g[u][i-1,j-1]
-						term2=term2*np.power(xivar,t-1)*multiplier
+							# term1
+							term1 = 0
+							for u in range(1, t):
+								term1temp = 1
+								for v in range(u+1,t):
+									term1temp *= g[v][i-1,j-1]
+								term1+= term1temp*np.power(xivar,t-u)*f[u][i-1,j-1]
+							
+							# term2
+							term2 = 1
+							for u in range(1,t):
+								term2 *= g[u][i-1,j-1]
+							term2=term2*np.power(xivar,t-1)*multiplier
 
-						# term3
-						term3 = 0
-						for u in range(1, t):
-							term3temp = 1
-							for v in range(u+1,t):
-								term3temp *= g[v][i-1,j-1]
-							term3 += term3temp*np.power(xivar,t-u-1)*(1-xivar)*multiplier
+							# term3
+							term3 = 0
+							for u in range(1, t):
+								term3temp = 1
+								for v in range(u+1,t):
+									term3temp *= g[v][i-1,j-1]
+								term3 += term3temp*np.power(xivar,t-u-1)*(1-xivar)*multiplier
 
-						score += np.power(w_hats[t][gfinals[t][i]-1,gfinals[t][j]-1] - term1 - term2 - term3,2)
+							score += np.power(w_hats[t][gfinals[t][i]-1,gfinals[t][j]-1] - term1 - term2 - term3,2)
 
 			return score
 

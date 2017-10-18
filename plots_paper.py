@@ -153,5 +153,6 @@ def plot_changing_mm(fname,debug=False):
 
 if __name__ == '__main__':
 	plot_fixed_lazy('explog_fixed_lazy.pkl')
+	plot_fixed_lazy('explog_fixed_lazy1.pkl')
 	# plot_fixed_bernoulli('explog_fixed_bernoulli.pkl')
 	# plot_changing_mm('explog_changing_mm.pkl')

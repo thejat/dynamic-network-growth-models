@@ -32,7 +32,7 @@ class EstimatorUtility(object):
 #Proposed Estimator for the Fixed Group Lazy Model 
 class EstimatorFixedGroupLazy(object):
 
-	def get_group_error(self,G,gfinal,k,debug=True):
+	def get_group_error(self,G,gfinal,k,debug=False):
 		temp_nodes = G.nodes()
 		#Find permutation matrices tau
 		Qtrue = np.zeros((len(temp_nodes),k))
@@ -47,6 +47,8 @@ class EstimatorFixedGroupLazy(object):
 
 		if debug:
 			# print tau
+			print {x[0]:x[1]['group'][0] for x in G.nodes(data=True)}
+			print gfinal
 			print 'error between ghat and gtrue: ',error
 
 		return error
@@ -166,6 +168,8 @@ class EstimatorFixedGroupLazy(object):
 		if r==s:
 			# in this case the mle is 2*number fo edges/((no of nodes)(no of nodes - 1)), 
 			# but we are already double counting rscount above
+			if scount == 1:
+				return 0
 			return rscount*1.0/(rcount*(scount - 1))
 		else:
 			return rscount*0.5/(rcount*scount)
@@ -245,9 +249,7 @@ class EstimatorFixedGroupLazy(object):
 			for i,G in enumerate(GT):
 				#ghats.append(community.best_partition(G))
 				ghats[i] = EstimatorUtility().graph_tool_community(G,k)
-				print gtruth
-				print ghats[i]
-				self.get_group_error(G,ghats[i],k)
+				# self.get_group_error(G,ghats[i],k)
 
 
 			#Aggregate/Unify

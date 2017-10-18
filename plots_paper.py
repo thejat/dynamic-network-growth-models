@@ -55,7 +55,7 @@ def plot_fixed_lazy(fname,debug=True):
 			ts_meanxi[t] += log[mcrun]['xifinals'][t]
 			ts_errorw[t,mcrun] = np.linalg.norm(params['Wtrue']-log[mcrun]['wfinals'][t],'fro')
 			ts_errorxi[t,mcrun] = abs(params['xitrue']-log[mcrun]['xifinals'][t])
-			ts_errorxi[t,mcrun] = EstimatorFixedGroupLazy().get_group_error(log[mcrun]['graphs'][0],log[mcrun]['gfinals'][t],params['k'])
+			ts_errorg[t,mcrun] = EstimatorFixedGroupLazy().get_group_error(log[mcrun]['graphs'][0],log[mcrun]['gfinals'][t],params['k'],True)
 		ts_meanw[t] = ts_meanw[t]*1.0/len(log)
 		ts_meanxi[t] = ts_meanxi[t]*1.0/len(log)
 	ts_errormeanw = np.mean(ts_errorw,axis=1)

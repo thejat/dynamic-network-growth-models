@@ -44,8 +44,8 @@ def run_experiment_Zhang_modelA_modified():
 def run_experiment_fixed_group_lazy(fname):
 	debug = False
 	params = {}
-	params['n_mcruns'] 		=   1#10
-	params['total_time'] 	=   3#12
+	params['n_mcruns'] 		=    3
+	params['total_time'] 	=   20
 	params['xitrue'] 		=   .2
 	params['Wtrue'] 		= np.array([[.8,.2],[.2,.8]])#[[1,.0],[.0,1]])# #np.random.rand(k,k)
 	params['k'] 			= params['Wtrue'].shape[0]

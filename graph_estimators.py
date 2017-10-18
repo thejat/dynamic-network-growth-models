@@ -450,9 +450,10 @@ class EstimatorChangingGroupMM(object):
 
 			gtilds[t+1] = {}
 			M[t] = {}
-			detected_sets = range(1, k+1)
+			detected_sets1 = range(1, k+1)
+			detected_sets2 = range(1, k+1)
 			for l1 in range(1, k+1):
-				for l2 in detected_sets:
+				for l2 in detected_sets2:
 					if debug:
 						print '\t\tl1 ',l1, 'l2 ',l2
 					I = Stild[(l1,t)].intersection(Shat[(l2,t+1)])
@@ -467,17 +468,17 @@ class EstimatorChangingGroupMM(object):
 								M[t][i]=0
 						for i in I:
 							M[t][i] = 1
-						detected_sets.remove(l2)
+						detected_sets1.remove(l1)
+						detected_sets2.remove(l2)
 						if debug:
 							print '\t\t\tgtilds[t+1]', gtilds[t+1]
 							print '\t\t\tM[t]       ', M[t]
 						break
 
 			#repeated with geq
-			if len(detected_sets) > 0:
-				detected_sets_copy = copy.deepcopy(detected_sets)
-				for l1 in detected_sets_copy:
-					for l2 in detected_sets:
+			if len(detected_sets1) > 0:
+				for l1 in detected_sets1:
+					for l2 in detected_sets2:
 						if debug:
 							print '\t\tl1 ',l1, 'l2 ',l2
 						I = Stild[(l1,t)].intersection(Shat[(l2,t+1)])
@@ -492,7 +493,7 @@ class EstimatorChangingGroupMM(object):
 									M[t][i]=0
 							for i in I:
 								M[t][i] = 1
-							detected_sets.remove(l2)
+							detected_sets2.remove(l2)
 							if debug:
 								print '\t\t\tgtilds[t+1]', gtilds[t+1]
 								print '\t\t\tM[t]       ', M[t]

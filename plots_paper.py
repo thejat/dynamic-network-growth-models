@@ -2,6 +2,7 @@ import numpy as np
 import pickle,pprint
 import seaborn as sns
 from matplotlib import pyplot as plt
+from graph_estimators import EstimatorFixedGroupLazy
 
 plt.style.use('fivethirtyeight')
 plt.rcParams['font.family'] = 'serif'
@@ -15,7 +16,6 @@ plt.rcParams['xtick.labelsize'] = 8
 plt.rcParams['ytick.labelsize'] = 8
 plt.rcParams['legend.fontsize'] = 10
 plt.rcParams['figure.titlesize'] = 12
-
 
 def plot_error_vs_time(error,time,title,errorstd=None):
 
@@ -46,18 +46,24 @@ def plot_fixed_lazy(fname,debug=True):
 	ts_errorxi = np.zeros((params['total_time']-1,len(log)))
 	ts_errormeanxi = np.zeros(params['total_time']-1)
 	ts_errorstdxi = np.zeros(params['total_time']-1)
+	ts_errorg = np.zeros((params['total_time']-1,len(log)))
+	ts_errormeang = np.zeros(params['total_time']-1)
+	ts_errorstdg = np.zeros(params['total_time']-1)
 	for t in range(params['total_time']-1):
 		for mcrun in range(len(log)):
 			ts_meanw[t] += log[mcrun]['wfinals'][t]
 			ts_meanxi[t] += log[mcrun]['xifinals'][t]
 			ts_errorw[t,mcrun] = np.linalg.norm(params['Wtrue']-log[mcrun]['wfinals'][t],'fro')
 			ts_errorxi[t,mcrun] = abs(params['xitrue']-log[mcrun]['xifinals'][t])
+			ts_errorxi[t,mcrun] = EstimatorFixedGroupLazy().get_group_error(log[mcrun]['graphs'][0],log[mcrun]['gfinals'][t],params['k'])
 		ts_meanw[t] = ts_meanw[t]*1.0/len(log)
 		ts_meanxi[t] = ts_meanxi[t]*1.0/len(log)
 	ts_errormeanw = np.mean(ts_errorw,axis=1)
 	ts_errorstdw = np.std(ts_errorw,axis=1)
 	ts_errormeanxi = np.mean(ts_errorxi,axis=1)
 	ts_errorstdxi = np.std(ts_errorxi,axis=1)
+	ts_errormeang = np.mean(ts_errorg,axis=1)
+	ts_errorstdg = np.std(ts_errorg,axis=1)
 
 	if debug:
 		print 'actual runs: ', len(log)
@@ -71,6 +77,8 @@ def plot_fixed_lazy(fname,debug=True):
 	plot_error_vs_time(ts_errormeanw,time,title,ts_errorstdw)
 	title='Estimation of Xi'
 	plot_error_vs_time(ts_errormeanxi,time,title,ts_errorstdxi)
+	title='Estimation of Groups'
+	plot_error_vs_time(ts_errormeang,time,title,ts_errorstdg)
 
 def plot_fixed_bernoulli(fname,debug=False):
 	rawdata = pickle.load(open(fname,'rb'))
@@ -144,6 +152,6 @@ def plot_changing_mm(fname,debug=False):
 	plot_error_vs_time(error,time,title)
 
 if __name__ == '__main__':
-	# plot_fixed_lazy('explog_fixed_lazy_comm.pkl')
-	plot_fixed_bernoulli('explog_fixed_bernoulli.pkl')
+	plot_fixed_lazy('explog_fixed_lazy.pkl')
+	# plot_fixed_bernoulli('explog_fixed_bernoulli.pkl')
 	# plot_changing_mm('explog_changing_mm.pkl')

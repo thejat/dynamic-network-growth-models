@@ -32,6 +32,25 @@ class EstimatorUtility(object):
 #Proposed Estimator for the Fixed Group Lazy Model 
 class EstimatorFixedGroupLazy(object):
 
+	def get_group_error(self,G,gfinal,k,debug=True):
+		temp_nodes = G.nodes()
+		#Find permutation matrices tau
+		Qtrue = np.zeros((len(temp_nodes),k))
+		Qfinal = np.zeros((len(temp_nodes),k))
+		for i in temp_nodes: #every node index from 1 to n
+			Qtrue[i-1,G.node[i]['group']-1] = 1
+			Qfinal[i-1,gfinal[i]-1] = 1
+
+		tau = EstimatorFixedGroupLazy().get_permutation_from_LP(Qtrue,Qfinal)
+
+		error = np.linalg.norm(Qtrue-np.dot(Qfinal,np.linalg.inv(tau)),'fro')
+
+		if debug:
+			# print tau
+			print 'error between ghat and gtrue: ',error
+
+		return error
+
 	def get_permutation_from_LP(self,Q1,Qt):
 
 		coeff = np.dot(np.transpose(Q1),Qt)
@@ -151,7 +170,6 @@ class EstimatorFixedGroupLazy(object):
 		else:
 			return rscount*0.5/(rcount*scount)
 			
-
 	def xiw_model_estimate_w(self,w_hats,r,s,debug=False):
 
 		wopt_array = np.zeros(len(w_hats))
@@ -227,6 +245,9 @@ class EstimatorFixedGroupLazy(object):
 			for i,G in enumerate(GT):
 				#ghats.append(community.best_partition(G))
 				ghats[i] = EstimatorUtility().graph_tool_community(G,k)
+				print gtruth
+				print ghats[i]
+				self.get_group_error(G,ghats[i],k)
 
 
 			#Aggregate/Unify

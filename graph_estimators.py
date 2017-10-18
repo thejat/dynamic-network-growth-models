@@ -564,7 +564,7 @@ class EstimatorChangingGroupMM(object):
 
 		g = {}
 		for t in range(len(GT)-1):
-			g[t] = np.zeros((temp_nodes), len(temp_nodes))
+			g[t] = np.zeros((len(temp_nodes), len(temp_nodes)))
 			for i in temp_nodes:
 				for j in temp_nodes:
 					if i < j:
@@ -612,7 +612,7 @@ class EstimatorChangingGroupMM(object):
 
 	def estimate_params(self, GT, k=2, W=np.eye(2), xi=1, ngridpoints=21, debug=False):
 
-		flag_estimate_ghats 				= False #True
+		flag_estimate_ghats 				= True #True
 		flag_estimate_gfinals_mfinals   	= True
 		flag_estimate_w_hats 				= True
 		flag_estimate_wfinal_and_xifinal 	= True  #False
@@ -661,6 +661,7 @@ class EstimatorChangingGroupMM(object):
 					mfinals = None # TBD
 
 		time1 = time.time() - time0
+		debug = True
 		if debug:
 			for t in range(len(GT)):
 				print '\tsnapshot', t,' ghat  ', ghats[t]

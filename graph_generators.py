@@ -22,7 +22,7 @@ def generate_fixed_group_bernoulli(Mu = np.eye(2), W=np.matrix([[0.1, 0.2], [0.2
         plt.show()
     GT = [Goriginal]
     for t in range(1, total_time + 1):
-        print '\tGraph snapshot at snapshot', t, ' time', time.time() - st
+        print '\tGraph at snapshot', t, ' time', time.time() - st
         Gcurrent = nx.Graph()
         for node in GT[t - 1].nodes(data=True):
             Gcurrent.add_node(node[0], group=node[1]['group'])

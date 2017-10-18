@@ -93,12 +93,17 @@ def plot_fixed_bernoulli(fname,debug=False):
 	ts_errormu = np.zeros((params['total_time']-1,len(log)))
 	ts_errormeanmu = np.zeros(params['total_time']-1)
 	ts_errorstdmu = np.zeros(params['total_time']-1)
+	ts_errorg = np.zeros((params['total_time']-1,len(log)))
+	ts_errormeang = np.zeros(params['total_time']-1)
+	ts_errorstdg = np.zeros(params['total_time']-1)
 	for t in range(params['total_time']-1):
 		for mcrun in range(len(log)):
 			ts_meanw[t] += log[mcrun]['wfinals'][t]
 			ts_meanmu[t] += log[mcrun]['mufinals'][t]
 			ts_errorw[t,mcrun] = np.linalg.norm(params['Wtrue']-log[mcrun]['wfinals'][t],'fro')
 			ts_errormu[t,mcrun] = np.linalg.norm(params['Mutrue']-log[mcrun]['mufinals'][t],'fro')
+			ts_errorg[t,mcrun] = EstimatorFixedGroupLazy().get_group_error(log[mcrun]['graphs'][0],log[mcrun]['gfinals'][t],params['k'],True)
+
 		ts_meanw[t] = ts_meanw[t]*1.0/len(log)
 		ts_meanmu[t] = ts_meanmu[t]*1.0/len(log)
 
@@ -106,7 +111,9 @@ def plot_fixed_bernoulli(fname,debug=False):
 	ts_errorstdw = np.std(ts_errorw,axis=1)
 	ts_errormeanmu = np.mean(ts_errormu,axis=1)
 	ts_errorstdmu = np.std(ts_errormu,axis=1)
-	
+	ts_errormeang = np.mean(ts_errorg,axis=1)
+	ts_errorstdg = np.std(ts_errorg,axis=1)
+
 	if debug:
 		pprint.pprint(ts_meanw)
 		pprint.pprint(ts_meanmu)
@@ -121,6 +128,8 @@ def plot_fixed_bernoulli(fname,debug=False):
 	# plot_error_vs_time([x[0,1] for x in ts_meanmu],time,title)
 	# plot_error_vs_time([x[1,0] for x in ts_meanmu],time,title)
 	# plot_error_vs_time([x[1,1] for x in ts_meanmu],time,title)
+	title='Estimation of Groups'
+	plot_error_vs_time(ts_errormeang,time,title,ts_errorstdg)
 
 def plot_changing_mm(fname,debug=False):
 	rawdata = pickle.load(open(fname,'rb'))
@@ -153,6 +162,5 @@ def plot_changing_mm(fname,debug=False):
 
 if __name__ == '__main__':
 	plot_fixed_lazy('explog_fixed_lazy.pkl')
-	plot_fixed_lazy('explog_fixed_lazy1.pkl')
-	# plot_fixed_bernoulli('explog_fixed_bernoulli.pkl')
+	plot_fixed_bernoulli('explog_fixed_bernoulli.pkl')
 	# plot_changing_mm('explog_changing_mm.pkl')

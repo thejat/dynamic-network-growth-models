@@ -474,30 +474,36 @@ class EstimatorChangingGroupMM(object):
 							print '\t\t\tgtilds[t+1]', gtilds[t+1]
 							print '\t\t\tM[t]       ', M[t]
 						break
+			if debug:
+				print 'detected_sets1',detected_sets1
+				print 'detected_sets2',detected_sets2
 
 			#repeated with geq
 			if len(detected_sets1) > 0:
 				for l1 in detected_sets1:
-					for l2 in detected_sets2:
+					intersection_levels = np.zeros(len(detected_sets2))
+					for idx,l2 in enumerate(detected_sets2):
 						if debug:
 							print '\t\tl1 ',l1, 'l2 ',l2
+							print 'set l1',Stild[(l1,t)]
+							print 'set l2',Shat[(l2,t+1)]
 						I = Stild[(l1,t)].intersection(Shat[(l2,t+1)])
 						if debug:
 							print '\t\tIntersection set: ',I
-						if len(I) >= len(Stild[(l1,t)])*1.0/2: #Ideally should be greater
-							if debug:
-								print "\t\tFound majority. Updating gtilds, M"
-							for i in Shat[(l2,t+1)]:
-									gtilds[t+1][i]=l1
-							for i in Stild[(l1,t)].difference(I):
-									M[t][i]=0
-							for i in I:
-								M[t][i] = 1
-							detected_sets2.remove(l2)
-							if debug:
-								print '\t\t\tgtilds[t+1]', gtilds[t+1]
-								print '\t\t\tM[t]       ', M[t]
-							break
+						intersection_levels[idx] = len(I)
+
+					l2 = detected_sets2[np.argmax(intersection_levels)]
+
+					for i in Shat[(l2,t+1)]:
+						gtilds[t+1][i]=l1
+					for i in Stild[(l1,t)].difference(I):
+						M[t][i] = 0
+					for i in I:
+						M[t][i] = 1
+					detected_sets2.remove(l2)
+					if debug:
+						print '\t\t\tgtilds[t+1]', gtilds[t+1]
+						print '\t\t\tM[t]       ', M[t]
 
 			if debug:
 				print '\t\tgtilds at t+1 =',t+1,' is ',gtilds[t+1]
@@ -662,7 +668,6 @@ class EstimatorChangingGroupMM(object):
 					mfinals = None # TBD
 
 		time1 = time.time() - time0
-		debug = True
 		if debug:
 			for t in range(len(GT)):
 				print '\tsnapshot', t,' ghat  ', ghats[t]

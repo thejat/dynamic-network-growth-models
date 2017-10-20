@@ -619,7 +619,7 @@ class EstimatorChangingGroupMM(object):
 
 	def estimate_params(self, GT, k=2, W=np.eye(2), xi=1, ngridpoints=21, debug=False):
 
-		flag_estimate_ghats 				= True #True
+		flag_estimate_ghats 				= False #True
 		flag_estimate_gfinals_mfinals   	= True
 		flag_estimate_w_hats 				= True
 		flag_estimate_wfinal_and_xifinal 	= True  #False

@@ -127,12 +127,12 @@ def run_experiment_changing_group_MM(fname):
 	debug = False
 	params = {}
 	params['n_mcruns'] 		=     10
-	params['total_time'] 	=     12
+	params['total_time'] 	=     20
 	params['xitrue'] 		=     .2
 	params['Wtrue'] 		= np.array([[.8,.2],[.2,.8]])
 	params['k'] 			= params['Wtrue'].shape[0]
 	params['n'] 			=     20
-	params['minority_pct_ub'] = 0.25
+	params['minority_pct_ub'] =  0.1
 	params['ngridpoints']	=     21
 	start_time = time.time()
 

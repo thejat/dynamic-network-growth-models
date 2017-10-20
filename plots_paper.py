@@ -8,14 +8,14 @@ plt.style.use('fivethirtyeight')
 plt.rcParams['font.family'] = 'serif'
 plt.rcParams['font.serif'] = 'Ubuntu'
 plt.rcParams['font.monospace'] = 'Ubuntu Mono'
-plt.rcParams['font.size'] = 10
-plt.rcParams['axes.labelsize'] = 10
-plt.rcParams['axes.labelweight'] = 'bold'
-plt.rcParams['axes.titlesize'] = 10
-plt.rcParams['xtick.labelsize'] = 8
-plt.rcParams['ytick.labelsize'] = 8
-plt.rcParams['legend.fontsize'] = 10
-plt.rcParams['figure.titlesize'] = 12
+plt.rcParams['font.size'] = 30
+plt.rcParams['axes.labelsize'] = 30
+# plt.rcParams['axes.labelweight'] = 'bold'
+plt.rcParams['axes.titlesize'] = 30
+plt.rcParams['xtick.labelsize'] = 20
+plt.rcParams['ytick.labelsize'] = 20
+plt.rcParams['legend.fontsize'] = 30
+plt.rcParams['figure.titlesize'] = 30
 
 def plot_error_vs_time(error,time,title,errorstd=None):
 
@@ -27,7 +27,7 @@ def plot_error_vs_time(error,time,title,errorstd=None):
 	plt.ylabel('Error')
 	plt.xlabel('Number of snapshots')
 	plt.show()
-	fig.savefig('./output/'+title.strip(' ')+'.png', bbox_inches='tight', pad_inches=0.2)
+	fig.savefig('./output/'+title.replace(':','').replace('-','').replace(' ','_')+'.png', bbox_inches='tight', pad_inches=0.2)
 
 def plot_error_vs_time0(error,time,title):
 
@@ -76,12 +76,12 @@ def plot_fixed_lazy(fname,debug=True):
 		pprint.pprint(ts_meanxi)
 
 	time = range(1,params['total_time'])
-	title='Lazy RW Error in the estimation of W'
+	title='FCLP-LazyRW: Error in the estimation of W'
 	plot_error_vs_time(ts_errormeanw,time,title,ts_errorstdw)
-	title='Lazy RW Error in the estimation of Xi'
+	title='FCLP-LazyRW: Error in the estimation of Xi'
 	plot_error_vs_time(ts_errormeanxi,time,title,ts_errorstdxi)
-	title='Lazy RW Error in the estimation of Groups'
-	plot_error_vs_time(ts_errormeang,time,title,ts_errorstdg)
+	# title='FCLP-LazyRW: Error in the estimation of Groups'
+	# plot_error_vs_time(ts_errormeang,time,title,ts_errorstdg)
 
 def plot_fixed_bernoulli(fname,debug=False):
 	rawdata = pickle.load(open(fname,'rb'))
@@ -123,16 +123,16 @@ def plot_fixed_bernoulli(fname,debug=False):
 
 
 	time = range(1,params['total_time'])
-	title='Bernoulli Error in the estimation of W'
+	title='FCLP-Bernoulli: Error in the estimation of W'
 	plot_error_vs_time(ts_errormeanw,time,title,ts_errorstdw)
-	title='Bernoulli Error in the estimation of Mu'
+	title='FCLP-Bernoulli: Error in the estimation of Mu'
 	plot_error_vs_time(ts_errormeanmu,time,title,ts_errorstdmu)
 	# plot_error_vs_time([x[0,0] for x in ts_meanmu],time,title)
 	# plot_error_vs_time([x[0,1] for x in ts_meanmu],time,title)
 	# plot_error_vs_time([x[1,0] for x in ts_meanmu],time,title)
 	# plot_error_vs_time([x[1,1] for x in ts_meanmu],time,title)
-	title='Bernoulli Error in the estimation of Groups'
-	plot_error_vs_time(ts_errormeang,time,title,ts_errorstdg)
+	# title='FCLP-Bernoulli: Error in the estimation of Groups'
+	# plot_error_vs_time(ts_errormeang,time,title,ts_errorstdg)
 
 def plot_changing_mm(fname,debug=False):
 	rawdata = pickle.load(open(fname,'rb'))
@@ -169,12 +169,12 @@ def plot_changing_mm(fname,debug=False):
 		pprint.pprint(ts_meanxi)
 
 	time = range(1,params['total_time'])
-	title='MM Error in the estimation of W'
+	title='CLPM: Error in the estimation of W'
 	plot_error_vs_time(ts_errormeanw,time,title,ts_errorstdw)
-	title='MM Error in the estimation of Xi'
+	title='CLPM: Error in the estimation of Xi'
 	plot_error_vs_time(ts_errormeanxi,time,title,ts_errorstdxi)
 
 if __name__ == '__main__':
-	# plot_fixed_lazy('./output/explog_fixed_lazy.pkl')
-	# plot_fixed_bernoulli('./output/explog_fixed_bernoulli.pkl')
+	plot_fixed_lazy('./output/explog_fixed_lazy.pkl')
+	plot_fixed_bernoulli('./output/explog_fixed_bernoulli.pkl')
 	plot_changing_mm('./output/explog_changing_mm.pkl')

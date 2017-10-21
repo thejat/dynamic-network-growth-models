@@ -17,7 +17,7 @@ plt.rcParams['ytick.labelsize'] = 20
 plt.rcParams['legend.fontsize'] = 30
 plt.rcParams['figure.titlesize'] = 30
 
-def plot_error_vs_time(error,time,title,errorstd=None):
+def plot_error_vs_time(error,time,title,errorstd=None,flag_write=False):
 
 	fig, ax = plt.subplots()
 	ax.plot(time,error)
@@ -27,16 +27,10 @@ def plot_error_vs_time(error,time,title,errorstd=None):
 	plt.ylabel('Error')
 	plt.xlabel('Number of snapshots')
 	plt.show()
-	fig.savefig('./output/'+title.replace(':','').replace('-','').replace(' ','_')+'.png', bbox_inches='tight', pad_inches=0.2)
+	if flag_write:
+		fig.savefig('./output/'+title.replace(':','').replace('-','').replace(' ','_')+'.png', bbox_inches='tight', pad_inches=0.2)
 
-def plot_error_vs_time0(error,time,title):
-
-	fig, ax = plt.subplots()
-	ax.plot(time,error)
-	ax.set_title(title)
-	plt.show()
-
-def plot_fixed_lazy(fname,debug=True):
+def plot_fixed_lazy(fname,flag_write=False,debug=True):
 	rawdata = pickle.load(open(fname,'rb'))
 	log= rawdata['log']
 	params = rawdata['params']
@@ -77,13 +71,13 @@ def plot_fixed_lazy(fname,debug=True):
 
 	time = range(1,params['total_time'])
 	title='FCLP-LazyRW: Error in the estimation of W'
-	plot_error_vs_time(ts_errormeanw,time,title,ts_errorstdw)
+	plot_error_vs_time(ts_errormeanw,time,title,ts_errorstdw,flag_write)
 	title='FCLP-LazyRW: Error in the estimation of Xi'
-	plot_error_vs_time(ts_errormeanxi,time,title,ts_errorstdxi)
+	plot_error_vs_time(ts_errormeanxi,time,title,ts_errorstdxi,flag_write)
 	# title='FCLP-LazyRW: Error in the estimation of Groups'
-	# plot_error_vs_time(ts_errormeang,time,title,ts_errorstdg)
+	# plot_error_vs_time(ts_errormeang,time,title,ts_errorstdg,flag_write)
 
-def plot_fixed_bernoulli(fname,debug=False):
+def plot_fixed_bernoulli(fname,flag_write=False,debug=False):
 	rawdata = pickle.load(open(fname,'rb'))
 	log= rawdata['log']
 	params = rawdata['params']
@@ -124,17 +118,17 @@ def plot_fixed_bernoulli(fname,debug=False):
 
 	time = range(1,params['total_time'])
 	title='FCLP-Bernoulli: Error in the estimation of W'
-	plot_error_vs_time(ts_errormeanw,time,title,ts_errorstdw)
+	plot_error_vs_time(ts_errormeanw,time,title,ts_errorstdw,flag_write)
 	title='FCLP-Bernoulli: Error in the estimation of Mu'
-	plot_error_vs_time(ts_errormeanmu,time,title,ts_errorstdmu)
-	# plot_error_vs_time([x[0,0] for x in ts_meanmu],time,title)
-	# plot_error_vs_time([x[0,1] for x in ts_meanmu],time,title)
-	# plot_error_vs_time([x[1,0] for x in ts_meanmu],time,title)
-	# plot_error_vs_time([x[1,1] for x in ts_meanmu],time,title)
+	plot_error_vs_time(ts_errormeanmu,time,title,ts_errorstdmu,flag_write)
+	# plot_error_vs_time([x[0,0] for x in ts_meanmu],time,title,flag_write=flag_write)
+	# plot_error_vs_time([x[0,1] for x in ts_meanmu],time,title,flag_write=flag_write)
+	# plot_error_vs_time([x[1,0] for x in ts_meanmu],time,title,flag_write=flag_write)
+	# plot_error_vs_time([x[1,1] for x in ts_meanmu],time,title,flag_write=flag_write)
 	# title='FCLP-Bernoulli: Error in the estimation of Groups'
-	# plot_error_vs_time(ts_errormeang,time,title,ts_errorstdg)
+	# plot_error_vs_time(ts_errormeang,time,title,ts_errorstdg,flag_write=flag_write)
 
-def plot_changing_mm(fname,debug=False):
+def plot_changing_mm(fname,flag_write=False,debug=False):
 	rawdata = pickle.load(open(fname,'rb'))
 	log= rawdata['log']
 	params = rawdata['params']
@@ -170,11 +164,11 @@ def plot_changing_mm(fname,debug=False):
 
 	time = range(1,params['total_time'])
 	title='CLPM: Error in the estimation of W'
-	plot_error_vs_time(ts_errormeanw,time,title,ts_errorstdw)
+	plot_error_vs_time(ts_errormeanw,time,title,ts_errorstdw,flag_write)
 	title='CLPM: Error in the estimation of Xi'
-	plot_error_vs_time(ts_errormeanxi,time,title,ts_errorstdxi)
+	plot_error_vs_time(ts_errormeanxi,time,title,ts_errorstdxi,flag_write)
 
 if __name__ == '__main__':
-	plot_fixed_lazy('./output/explog_fixed_lazy.pkl')
-	plot_fixed_bernoulli('./output/explog_fixed_bernoulli.pkl')
-	plot_changing_mm('./output/explog_changing_mm.pkl')
+	# plot_fixed_lazy('./output/explog_fixed_lazy.pkl',flag_write=False)
+	# plot_fixed_bernoulli('./output/explog_fixed_bernoulli.pkl',flag_write=False)
+	plot_changing_mm('./output/explog_changing_mm.pkl',flag_write=False)

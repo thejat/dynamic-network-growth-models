@@ -167,6 +167,7 @@ def plot_changing_mm(fname,flag_write=False,debug=False):
 	plot_error_vs_time(ts_errormeanw,time,title,ts_errorstdw,flag_write)
 	title='CLPM: Error in the estimation of Xi'
 	plot_error_vs_time(ts_errormeanxi,time,title,ts_errorstdxi,flag_write)
+	plot_error_vs_time(ts_meanxi,time,title,flag_write=flag_write)
 
 if __name__ == '__main__':
 	# plot_fixed_lazy('./output/explog_fixed_lazy.pkl',flag_write=False)

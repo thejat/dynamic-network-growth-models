@@ -2,3 +2,4 @@
 *.idea
 *others
 *.pkl
+output/

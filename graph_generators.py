@@ -102,7 +102,7 @@ def generate_changing_group_MM(minority_pct_ub=0.4, xi=1, W=np.matrix('0.9 0.1; 
     print 'Generating data'
     Goriginal = nx.Graph()
     for i in range(1, n + 1):
-        Goriginal.add_node(i, group=np.random.choice(range(1, k + 1), 1))
+        Goriginal.add_node(i, group=np.random.choice(range(1, k + 1), 1), majority=1)
 
     for j in range(1, n + 1):
         for i in range(1, j):

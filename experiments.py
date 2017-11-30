@@ -44,12 +44,12 @@ def run_experiment_Zhang_modelA_modified():
 def run_experiment_fixed_group_lazy(fname):
 	debug = False
 	params = {}
-	params['n_mcruns'] 		=   10
-	params['total_time'] 	=   30
+	params['n_mcruns'] 		=   10#10
+	params['total_time'] 	=   10#30
 	params['xitrue'] 		=   .2
 	params['Wtrue'] 		= np.array([[.8,.2],[.2,.8]])#[[1,.0],[.0,1]])# #np.random.rand(k,k)
 	params['k'] 			= params['Wtrue'].shape[0]
-	params['n'] 			=  100
+	params['n'] 			=  30#100
 	params['ngridpoints']	=   21
 	start_time = time.time()
 
@@ -174,10 +174,10 @@ if __name__=='__main__':
 	# run_experiment_Zhang_modelA_modified()
 
 	#Majority/Minority model
-	run_experiment_changing_group_MM('./output/explog_changing_mm.pkl')
+	# run_experiment_changing_group_MM('./output/explog_changing_mm.pkl')
 
 	#Fixed Group Lazy
-	# run_experiment_fixed_group_lazy('./output/explog_fixed_lazy.pkl')
+	run_experiment_fixed_group_lazy('./output/explog_fixed_lazy.pkl')
 
 	#Fixed group Bernoulli
 	# run_experiment_fixed_group_bernoulli('./output/explog_fixed_bernoulli.pkl')

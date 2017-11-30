@@ -97,14 +97,19 @@ class EstimatorFixedGroupLazy(object):
 
 		#Find permutation matrices tau's
 		Qs = {}
-		for j in ghats:#0,1.,...,T
-			Qs[j] = np.zeros((len(ghats[0]),k))
-			for i in range(1,len(ghats[0])+1): #every node index from 1 to n
-				Qs[j][i-1,ghats[j][i]-1] = 1
-
 		taus = {}
 		for j in range(1,len(ghats)):#ghats except the first one
-			taus[j] = self.get_permutation_from_LP(Qs[0],Qs[j])
+
+			#create the jth snapshot matrix
+			Qs[j] = np.zeros((len(ghats[j]),k))
+			for i,x in enumerate(ghats[j]): #every node index in the jth snapshot
+				Qs[j][i,ghats[j][x]-1] = 1
+
+			Qs_0_subset = np.zeros((len(ghats[j]),k))
+			for i,x in enumerate(ghats[j]): #every node index in the jth snapshot
+				Qs_0_subset[i,ghats[0][x]-1] = 1
+
+			taus[j] = self.get_permutation_from_LP(Qs_0_subset,Qs[j]) #always a k*k matrix
 
 		#apply them on Qt's to get unpermuted group memberships
 		gfinal = {}
@@ -246,10 +251,10 @@ class EstimatorFixedGroupLazy(object):
 			gfinal = gtruth
 		else:
 			#Estimate communities for individual snapshots
-			for i,G in enumerate(GT):
+			for t,G in enumerate(GT):
 				#ghats.append(community.best_partition(G))
-				ghats[i] = EstimatorUtility().graph_tool_community(G,k)
-				# self.get_group_error(G,ghats[i],k)
+				ghats[t] = EstimatorUtility().graph_tool_community(G,k)
+				# self.get_group_error(G,ghats[t],k)
 
 
 			#Aggregate/Unify
@@ -414,7 +419,7 @@ class EstimatorFixedGroupBernoulli(object):
 		return ghats,gfinal,w_hats,wfinal,mufinal,[time1,time2,time3]
 
 # Proposed Estimator for the Majority Lazy Model
-class EstimatorChangingGroupMM(object):
+class EstimatorChangingGroupMMold(object):
 
 	def get_permuted_groups_majority_info(self, ghats, k, debug=False):
 
@@ -731,349 +736,349 @@ class EstimatorChangingGroupMM(object):
 
 		return ghats,gfinals,mfinals,w_hats,wfinal,xifinal,[time1,time2,time3]
 
-	# Proposed Estimator for the Majority Lazy Model******************************************NEW***********************************************************************
-	class EstimatorChangingGroupMM(object):
-		def removemin(self, G, M):
-			g = Graph()
-			gv = {}
-			ge = {}
-			for n in G.nodes():
-				if M[t][n]==0:
-					continue
-				else:
-					gv[n] = g.add_vertex()
-			for e in G.edges():
-				if gv[e[0]] in gv and gv[e[1]] in gv:
-				ge[e] = g.add_edge(gv[e[0]], gv[e[1]])  # connects two ends of the edges
-			return [gmin, gvmin, gemin]
+# Proposed Estimator for the Majority Lazy Model******************************************NEW***********************************************************************
+class EstimatorChangingGroupMM(object):
+	def remove_minorities(self, G, M):
+		g = Graph()
+		gv = {}
+		ge = {}
+		for n in G.nodes():
+			if M[t][n]==0:
+				continue
+			else:
+				gv[n] = g.add_vertex()
+		for e in G.edges():
+			if gv[e[0]] in gv and gv[e[1]] in gv:
+			ge[e] = g.add_edge(gv[e[0]], gv[e[1]])  # connects two ends of the edges
+		return [gmin, gvmin, gemin]
 
-		def removemax(self, G, M):
-			g = Graph()
-			gv = {}
-			ge = {}
-			for n in G.nodes():
-				if M[t][n]==1:
-					continue
-				else:
-					gv[n] = g.add_vertex()
-			for e in G.edges():
-				if gv[e[0]] in gv and gv[e[1]] in gv:
-				ge[e] = g.add_edge(gv[e[0]], gv[e[1]])  # connects two ends of the edges
-			return [gmax, gvmax, gemax]
+	def remove_majorities(self, G, M):
+		g = Graph()
+		gv = {}
+		ge = {}
+		for n in G.nodes():
+			if M[t][n]==1:
+				continue
+			else:
+				gv[n] = g.add_vertex()
+		for e in G.edges():
+			if gv[e[0]] in gv and gv[e[1]] in gv:
+			ge[e] = g.add_edge(gv[e[0]], gv[e[1]])  # connects two ends of the edges
+		return [gmax, gvmax, gemax]
 
 
-		def get_permuted_groups_majority_info(self, ghats,M , k, debug=False):
+	def get_permuted_groups_majority_info(self, ghats,M , k, debug=False):
 
+		if debug:
+			print ghats[0]
+			print ghats[1]
+
+		gtilds = {}
+		gtilds[0] = ghats[0]
+
+		#M = {}  # np.zeros((len(ghats)-1,len(ghats[0])))
+		Stild = {}
+		Shat = {}
+		for t in range(0, len(ghats) - 1):
 			if debug:
-				print ghats[0]
-				print ghats[1]
+				print "\tt", t
+			for l in range(1, k + 1):
 
-			gtilds = {}
-			gtilds[0] = ghats[0]
+				Stild[(l, t)] = set()
+				for i in ghats[t]:
+					if gtilds[t][i] == l:
+						Stild[(l, t)].add(i)
 
-			#M = {}  # np.zeros((len(ghats)-1,len(ghats[0])))
-			Stild = {}
-			Shat = {}
-			for t in range(0, len(ghats) - 1):
-				if debug:
-					print "\tt", t
-				for l in range(1, k + 1):
+				Shat[(l, t + 1)] = set()
+				for i in ghats[t + 1]:
+					if ghats[t + 1][i] == l:
+						Shat[(l, t + 1)].add(i)
+			if debug:
+				print '\t\t ghat at t  ', ghats[t]
+				print '\t\t ghat at t+1', ghats[t + 1]
+				print '\t\t Stild', Stild
+				print '\t\t Shat', Shat
 
-					Stild[(l, t)] = set()
-					for i in ghats[t]:
-						if gtilds[t][i] == l:
-							Stild[(l, t)].add(i)
-
-					Shat[(l, t + 1)] = set()
-					for i in ghats[t + 1]:
-						if ghats[t + 1][i] == l:
-							Shat[(l, t + 1)].add(i)
-				if debug:
-					print '\t\t ghat at t  ', ghats[t]
-					print '\t\t ghat at t+1', ghats[t + 1]
-					print '\t\t Stild', Stild
-					print '\t\t Shat', Shat
-
-				gtilds[t + 1] = {}
-				M[t] = {}
-				detected_sets1 = range(1, k + 1)
-				detected_sets2 = range(1, k + 1)
-				for l1 in range(1, k + 1):
-					for l2 in detected_sets2:
+			gtilds[t + 1] = {}
+			M[t] = {}
+			detected_sets1 = range(1, k + 1)
+			detected_sets2 = range(1, k + 1)
+			for l1 in range(1, k + 1):
+				for l2 in detected_sets2:
+					if debug:
+						print '\t\tl1 ', l1, 'l2 ', l2
+					I = Stild[(l1, t)].intersection(Shat[(l2, t + 1)])
+					if debug:
+						print '\t\tIntersection set: ', I
+					if len(I) > len(Stild[(l1, t)]) * 1.0 / 2:  # Ideally should be greater
 						if debug:
-							print '\t\tl1 ', l1, 'l2 ', l2
-						I = Stild[(l1, t)].intersection(Shat[(l2, t + 1)])
-						if debug:
-							print '\t\tIntersection set: ', I
-						if len(I) > len(Stild[(l1, t)]) * 1.0 / 2:  # Ideally should be greater
-							if debug:
-								print "\t\tFound majority. Updating gtilds, M"
-							for i in Shat[(l2, t + 1)]:
-								gtilds[t + 1][i] = l1
-							for i in Stild[(l1, t)].difference(I):
-								M[t][i] = 0
-							for i in I:
-								M[t][i] = 1
-							detected_sets1.remove(l1)
-							detected_sets2.remove(l2)
-							if debug:
-								print '\t\t\tgtilds[t+1]', gtilds[t + 1]
-								print '\t\t\tM[t]       ', M[t]
-							break
-				if debug:
-					print 'detected_sets1', detected_sets1
-					print 'detected_sets2', detected_sets2
-
-				# repeated with geq
-				if len(detected_sets1) > 0:
-					for l1 in detected_sets1:
-						intersection_levels = np.zeros(len(detected_sets2))
-						for idx, l2 in enumerate(detected_sets2):
-							if debug:
-								print '\t\tl1 ', l1, 'l2 ', l2
-								print 'set l1', Stild[(l1, t)]
-								print 'set l2', Shat[(l2, t + 1)]
-							I = Stild[(l1, t)].intersection(Shat[(l2, t + 1)])
-							if debug:
-								print '\t\tIntersection set: ', I
-							intersection_levels[idx] = len(I)
-
-						l2 = detected_sets2[np.argmax(intersection_levels)]
-
+							print "\t\tFound majority. Updating gtilds, M"
 						for i in Shat[(l2, t + 1)]:
 							gtilds[t + 1][i] = l1
 						for i in Stild[(l1, t)].difference(I):
 							M[t][i] = 0
 						for i in I:
 							M[t][i] = 1
+						detected_sets1.remove(l1)
 						detected_sets2.remove(l2)
 						if debug:
 							print '\t\t\tgtilds[t+1]', gtilds[t + 1]
 							print '\t\t\tM[t]       ', M[t]
+						break
+			if debug:
+				print 'detected_sets1', detected_sets1
+				print 'detected_sets2', detected_sets2
 
-				if debug:
-					print '\t\tgtilds at t+1 =', t + 1, ' is ', gtilds[t + 1]
-			return gtilds, M
+			# repeated with geq
+			if len(detected_sets1) > 0:
+				for l1 in detected_sets1:
+					intersection_levels = np.zeros(len(detected_sets2))
+					for idx, l2 in enumerate(detected_sets2):
+						if debug:
+							print '\t\tl1 ', l1, 'l2 ', l2
+							print 'set l1', Stild[(l1, t)]
+							print 'set l2', Shat[(l2, t + 1)]
+						I = Stild[(l1, t)].intersection(Shat[(l2, t + 1)])
+						if debug:
+							print '\t\tIntersection set: ', I
+						intersection_levels[idx] = len(I)
 
-		def maj_xiw_model_estimate_xiw(self, w_hats, gfinals, mfinals, k, GT, ngridpoints=21, debug=False):
+					l2 = detected_sets2[np.argmax(intersection_levels)]
 
-			def scoring(xivar, avar, wbaropt, w_hats, gfinals, f, g, k, GT):
-				score = 0
-				temp_nodes = GT[0].nodes()
-				for t in range(1, len(GT)):
-					for i in temp_nodes:
-						for j in temp_nodes:
-							if i < j:
-								if gfinals[t][i] == gfinals[t][j]:
-									multiplier = avar * k * wbaropt + (1 - avar) * wbaropt
-								else:
-									multiplier = (1 - avar) * wbaropt
+					for i in Shat[(l2, t + 1)]:
+						gtilds[t + 1][i] = l1
+					for i in Stild[(l1, t)].difference(I):
+						M[t][i] = 0
+					for i in I:
+						M[t][i] = 1
+					detected_sets2.remove(l2)
+					if debug:
+						print '\t\t\tgtilds[t+1]', gtilds[t + 1]
+						print '\t\t\tM[t]       ', M[t]
 
-								# term1
-								term1 = 0
-								for u in range(1, t):
-									term1temp = 1
-									for v in range(u + 1, t):
-										term1temp *= g[v][i - 1, j - 1]
-									term1 += term1temp * np.power(xivar, t - u) * f[u][i - 1, j - 1]
+			if debug:
+				print '\t\tgtilds at t+1 =', t + 1, ' is ', gtilds[t + 1]
+		return gtilds, M
 
-								# term2
-								term2 = 1
-								for u in range(1, t):
-									term2 *= g[u][i - 1, j - 1]
-								term2 = term2 * np.power(xivar, t - 1) * multiplier
+	def maj_xiw_model_estimate_xiw(self, w_hats, gfinals, mfinals, k, GT, ngridpoints=21, debug=False):
 
-								# term3
-								term3 = 0
-								for u in range(1, t):
-									term3temp = 1
-									for v in range(u + 1, t):
-										term3temp *= g[v][i - 1, j - 1]
-									term3 += term3temp * np.power(xivar, t - u - 1) * (1 - xivar) * multiplier
-
-								score += np.power(
-									w_hats[t][gfinals[t][i] - 1, gfinals[t][j] - 1] - term1 - term2 - term3, 2)
-
-				return score
-
-			# Step: Estimate wbaropt via averaging
-			wbaropt = 0
-			for t in range(len(GT)):
-				wbaropt += np.mean(w_hats[t])
-			wbaropt = wbaropt * 1.0 / len(GT)
-
-			# Step: Compute f,g intermediate quantities needed for Gridsearch
+		def scoring(xivar, avar, wbaropt, w_hats, gfinals, f, g, k, GT):
+			score = 0
 			temp_nodes = GT[0].nodes()
-			f = {}
-			for t in range(len(GT) - 1):
-				f[t] = np.zeros((len(temp_nodes), len(temp_nodes)))
+			for t in range(1, len(GT)):
 				for i in temp_nodes:
 					for j in temp_nodes:
 						if i < j:
-							f[t][i - 1, j - 1] = mfinals[t][i] * (1 - mfinals[t][j]) * k * wbaropt * 1.0 / (k - 1) \
-												 + (1 - mfinals[t][i]) * mfinals[t][j] * k * wbaropt * 1.0 / (k - 1) \
-												 + (1 - mfinals[t][i]) * (1 - mfinals[t][j]) * wbaropt * (
-							np.power(k, 2) - 2 * k) * 1.0 / np.power(k - 1, 2)
+							if gfinals[t][i] == gfinals[t][j]:
+								multiplier = avar * k * wbaropt + (1 - avar) * wbaropt
+							else:
+								multiplier = (1 - avar) * wbaropt
 
-			g = {}
-			for t in range(len(GT) - 1):
-				g[t] = np.zeros((len(temp_nodes), len(temp_nodes)))
-				for i in temp_nodes:
-					for j in temp_nodes:
-						if i < j:
-							g[t][i - 1, j - 1] = mfinals[t][i] * mfinals[t][j] \
-												 - mfinals[t][i] * (1 - mfinals[t][j]) * 1.0 / (k - 1) \
-												 - (1 - mfinals[t][i]) * mfinals[t][j] * 1.0 / (k - 1) \
-												 + (1 - mfinals[t][i]) * (1 - mfinals[t][j]) * 1.0 / np.power((k - 1),
-																											  2)
-			# gprod = {}
-			# for t in range(1,len(GT)):
-			# 	for u in range(t-1,-1,-1):
-			# 		gprod[(t,u)] = np.ones((temp_nodes), len(temp_nodes))
-			# 		for i in temp_nodes:
-			# 			for j in temp_nodes:
-			# 				if i < j:
-			# 					gprod[(t,u)][i-1,j-1] = gprod[(t,u+1)][i-1,j-1]*g[u][i-1,j-1]
+							# term1
+							term1 = 0
+							for u in range(1, t):
+								term1temp = 1
+								for v in range(u + 1, t):
+									term1temp *= g[v][i - 1, j - 1]
+								term1 += term1temp * np.power(xivar, t - u) * f[u][i - 1, j - 1]
 
-			# Step: Gridsearch xiopt,aopt
-			grid_pts = np.linspace(0, 1, ngridpoints)
-			score_log = np.zeros((len(grid_pts), len(grid_pts)))
-			current_min = 1e8  # Potential bug
-			xiopt, aopt = grid_pts[0], grid_pts[0]
-			for ix1, xivar in enumerate(grid_pts):
-				for ix2, avar in enumerate(grid_pts):
-					candidate_score = scoring(xivar, avar, wbaropt, w_hats, gfinals, f, g, k, GT)
-					score_log[ix1, ix2] = candidate_score
-					if np.isnan(candidate_score):
-						continue
-					if candidate_score <= current_min:
-						xiopt = xivar
-						aopt = avar
-						current_min = candidate_score
-			if debug:
-				print 'xiopt', xiopt
-				print 'aopt', aopt
-				print 'wbaropt', wbaropt
+							# term2
+							term2 = 1
+							for u in range(1, t):
+								term2 *= g[u][i - 1, j - 1]
+							term2 = term2 * np.power(xivar, t - 1) * multiplier
 
-			# Step: Return wfinal and xifinal
-			xifinal = xiopt  # redundant
-			off_diagonal = (1 - aopt) * wbaropt
-			wfinal = off_diagonal * np.ones((k, k))
-			for r in range(k):
-				wfinal[r, r] += aopt * k * wbaropt
+							# term3
+							term3 = 0
+							for u in range(1, t):
+								term3temp = 1
+								for v in range(u + 1, t):
+									term3temp *= g[v][i - 1, j - 1]
+								term3 += term3temp * np.power(xivar, t - u - 1) * (1 - xivar) * multiplier
 
-			return wfinal, xifinal
+							score += np.power(
+								w_hats[t][gfinals[t][i] - 1, gfinals[t][j] - 1] - term1 - term2 - term3, 2)
 
-		def estimate_params(self, GT, k=2, W=np.eye(2), xi=1, ngridpoints=21, debug=False):
+			return score
 
-			flag_estimate_ghats = False  # True
-			flag_estimate_gfinals_mfinals = True
-			flag_estimate_w_hats = True
-			flag_estimate_wfinal_and_xifinal = True  # False
+		# Step: Estimate wbaropt via averaging
+		wbaropt = 0
+		for t in range(len(GT)):
+			wbaropt += np.mean(w_hats[t])
+		wbaropt = wbaropt * 1.0 / len(GT)
 
-			# Initialization
-			ghats = []
-			gfinals = None
-			mfinals = None
-			w_hats = {}
+		# Step: Compute f,g intermediate quantities needed for Gridsearch
+		temp_nodes = GT[0].nodes()
+		f = {}
+		for t in range(len(GT) - 1):
+			f[t] = np.zeros((len(temp_nodes), len(temp_nodes)))
+			for i in temp_nodes:
+				for j in temp_nodes:
+					if i < j:
+						f[t][i - 1, j - 1] = mfinals[t][i] * (1 - mfinals[t][j]) * k * wbaropt * 1.0 / (k - 1) \
+											 + (1 - mfinals[t][i]) * mfinals[t][j] * k * wbaropt * 1.0 / (k - 1) \
+											 + (1 - mfinals[t][i]) * (1 - mfinals[t][j]) * wbaropt * (
+						np.power(k, 2) - 2 * k) * 1.0 / np.power(k - 1, 2)
+
+		g = {}
+		for t in range(len(GT) - 1):
+			g[t] = np.zeros((len(temp_nodes), len(temp_nodes)))
+			for i in temp_nodes:
+				for j in temp_nodes:
+					if i < j:
+						g[t][i - 1, j - 1] = mfinals[t][i] * mfinals[t][j] \
+											 - mfinals[t][i] * (1 - mfinals[t][j]) * 1.0 / (k - 1) \
+											 - (1 - mfinals[t][i]) * mfinals[t][j] * 1.0 / (k - 1) \
+											 + (1 - mfinals[t][i]) * (1 - mfinals[t][j]) * 1.0 / np.power((k - 1),
+																										  2)
+		# gprod = {}
+		# for t in range(1,len(GT)):
+		# 	for u in range(t-1,-1,-1):
+		# 		gprod[(t,u)] = np.ones((temp_nodes), len(temp_nodes))
+		# 		for i in temp_nodes:
+		# 			for j in temp_nodes:
+		# 				if i < j:
+		# 					gprod[(t,u)][i-1,j-1] = gprod[(t,u+1)][i-1,j-1]*g[u][i-1,j-1]
+
+		# Step: Gridsearch xiopt,aopt
+		grid_pts = np.linspace(0, 1, ngridpoints)
+		score_log = np.zeros((len(grid_pts), len(grid_pts)))
+		current_min = 1e8  # Potential bug
+		xiopt, aopt = grid_pts[0], grid_pts[0]
+		for ix1, xivar in enumerate(grid_pts):
+			for ix2, avar in enumerate(grid_pts):
+				candidate_score = scoring(xivar, avar, wbaropt, w_hats, gfinals, f, g, k, GT)
+				score_log[ix1, ix2] = candidate_score
+				if np.isnan(candidate_score):
+					continue
+				if candidate_score <= current_min:
+					xiopt = xivar
+					aopt = avar
+					current_min = candidate_score
+		if debug:
+			print 'xiopt', xiopt
+			print 'aopt', aopt
+			print 'wbaropt', wbaropt
+
+		# Step: Return wfinal and xifinal
+		xifinal = xiopt  # redundant
+		off_diagonal = (1 - aopt) * wbaropt
+		wfinal = off_diagonal * np.ones((k, k))
+		for r in range(k):
+			wfinal[r, r] += aopt * k * wbaropt
+
+		return wfinal, xifinal
+
+	def estimate_params(self, GT, k=2, W=np.eye(2), xi=1, ngridpoints=21, debug=False):
+
+		flag_estimate_ghats = False  # True
+		flag_estimate_gfinals_mfinals = True
+		flag_estimate_w_hats = True
+		flag_estimate_wfinal_and_xifinal = True  # False
+
+		# Initialization
+		ghats = []
+		gfinals = None
+		mfinals = None
+		w_hats = {}
+		for t in range(len(GT)):
+			ghats.append(None)
+			w_hats[t] = None
+		wfinal = None
+		xifinal = 0
+		time0 = time.time()
+		if debug:
+			print '\tEstimating ghats, gfinals, mfinals, wfinal, xifinal. Timing starts here.'
+
+		# Step 1: Estimate communities for individual snapshots
+		if flag_estimate_ghats == True:
+			for t, G in enumerate(GT):
+				# ghats.append(community.best_partition(G))
+				ghats[t] = EstimatorUtility().graph_tool_community(G, k)
+		else:
+			# Else copy the true groups as ghats
+			for t, G in enumerate(GT):
+				ghats[t] = {x[0]: x[1]['group'][0] for x in GT[t].nodes(data=True)}
+
+		# Step 2: Estimate gfinals and majority minority labels for each t
+		if flag_estimate_gfinals_mfinals == True:
+			# Aggregate/Unify
+			gfinals, mfinals = self.get_permuted_groups_majority_info(ghats, k)
+		else:
+			gfinals = []
+			for t, G in enumerate(GT):
+				gfinals[t] = {x[0]: x[1]['group'][0] for x in GT[t].nodes(data=True)}
+
+			# True Majority/Minority computed here TBD
+			mfinals = {}
+			for t, G in enumerate(GT):
+				if t == 0:
+					continue
+				else:
+					mfinals = None  # TBD
+
+		time1 = time.time() - time0
+		if debug:
 			for t in range(len(GT)):
-				ghats.append(None)
-				w_hats[t] = None
-			wfinal = None
-			xifinal = 0
-			time0 = time.time()
-			if debug:
-				print '\tEstimating ghats, gfinals, mfinals, wfinal, xifinal. Timing starts here.'
+				print '\tsnapshot', t, ' ghat  ', ghats[t]
+				print '\tsnapshot', t, ' gfinal', gfinals[t]
+				if t == len(GT) - 1:
+					continue
+				print '\tsnapshot', t, ' mfinal', mfinals[t]
 
-			# Step 1: Estimate communities for individual snapshots
-			if flag_estimate_ghats == True:
-				for t, G in enumerate(GT):
-					# ghats.append(community.best_partition(G))
-					ghats[t] = EstimatorUtility().graph_tool_community(G, k)
-			else:
-				# Else copy the true groups as ghats
-				for t, G in enumerate(GT):
-					ghats[t] = {x[0]: x[1]['group'][0] for x in GT[t].nodes(data=True)}
+		# Step 3: Estimate w_hats
+		if flag_estimate_w_hats == True:
+			# Estimate w_hat_t_r_s
+			w_hats = {}
+			for t, G in enumerate(GT):
+				w_hats[t] = np.zeros((k, k))
+				for r in range(1, k + 1):
+					for s in range(1, k + 1):
+						w_hats[t][r - 1, s - 1] = EstimatorFixedGroupLazy().estimate_w_mle(G, r, s, gfinals[t])
+		else:
+			w_hats = {}
+			for t, G in enumerate(GT):
+				w_hats[t] = np.zeros((k, k))
+				for r in range(1, k + 1):
+					for s in range(1, k + 1):
+						w_hats[t][r - 1, s - 1] = None  # TBD
 
-			# Step 2: Estimate gfinals and majority minority labels for each t
-			if flag_estimate_gfinals_mfinals == True:
-				# Aggregate/Unify
-				gfinals, mfinals = self.get_permuted_groups_majority_info(ghats, k)
-			else:
-				gfinals = []
-				for t, G in enumerate(GT):
-					gfinals[t] = {x[0]: x[1]['group'][0] for x in GT[t].nodes(data=True)}
+		time2 = time.time() - time0
+		if debug:
+			for t in range(1, len(GT) + 1):
+				print '\n\t w_hats', t, w_hats[t - 1]
 
-				# True Majority/Minority computed here TBD
-				mfinals = {}
-				for t, G in enumerate(GT):
-					if t == 0:
-						continue
-					else:
-						mfinals = None  # TBD
+		# Step 4: Estimate wfinal and xifinal
+		if debug:
+			print '\tEstimating w and xi starts at time', time2
+		if flag_estimate_wfinal_and_xifinal == True:
+			wfinal, xifinal = self.maj_xiw_model_estimate_xiw(w_hats, gfinals, mfinals, k, GT, ngridpoints,
+															  debug=False)
+		else:
+			wfinal = W  # copying the ground truth
+			xifinal = xi  # copying the ground truth
+		time3 = time.time() - time0
+		if debug:
+			print '\tEstimating wfinal and xifinal ends at time', time3
+			print '\txifinal', xifinal
+			print '\twfinal', wfinal
 
-			time1 = time.time() - time0
-			if debug:
-				for t in range(len(GT)):
-					print '\tsnapshot', t, ' ghat  ', ghats[t]
-					print '\tsnapshot', t, ' gfinal', gfinals[t]
-					if t == len(GT) - 1:
-						continue
-					print '\tsnapshot', t, ' mfinal', mfinals[t]
+		if debug:
+			# print ghats
+			# print gfinals
+			# print mfinals
+			for t in range(len(GT)):
+				print '\tsnapshot', t, ' ghat  ', ghats[t]
+			for t in range(len(GT)):
+				print '\tsnapshot', t, ' gfinal', gfinals[t]
+			for t in range(len(GT)):
+				if t == len(GT) - 1:
+					continue
+				print '\tsnapshot', t, ' mfinal', mfinals[t]
+			print '\txifinal', xifinal
+			print '\twfinal', wfinal
 
-			# Step 3: Estimate w_hats
-			if flag_estimate_w_hats == True:
-				# Estimate w_hat_t_r_s
-				w_hats = {}
-				for t, G in enumerate(GT):
-					w_hats[t] = np.zeros((k, k))
-					for r in range(1, k + 1):
-						for s in range(1, k + 1):
-							w_hats[t][r - 1, s - 1] = EstimatorFixedGroupLazy().estimate_w_mle(G, r, s, gfinals[t])
-			else:
-				w_hats = {}
-				for t, G in enumerate(GT):
-					w_hats[t] = np.zeros((k, k))
-					for r in range(1, k + 1):
-						for s in range(1, k + 1):
-							w_hats[t][r - 1, s - 1] = None  # TBD
-
-			time2 = time.time() - time0
-			if debug:
-				for t in range(1, len(GT) + 1):
-					print '\n\t w_hats', t, w_hats[t - 1]
-
-			# Step 4: Estimate wfinal and xifinal
-			if debug:
-				print '\tEstimating w and xi starts at time', time2
-			if flag_estimate_wfinal_and_xifinal == True:
-				wfinal, xifinal = self.maj_xiw_model_estimate_xiw(w_hats, gfinals, mfinals, k, GT, ngridpoints,
-																  debug=False)
-			else:
-				wfinal = W  # copying the ground truth
-				xifinal = xi  # copying the ground truth
-			time3 = time.time() - time0
-			if debug:
-				print '\tEstimating wfinal and xifinal ends at time', time3
-				print '\txifinal', xifinal
-				print '\twfinal', wfinal
-
-			if debug:
-				# print ghats
-				# print gfinals
-				# print mfinals
-				for t in range(len(GT)):
-					print '\tsnapshot', t, ' ghat  ', ghats[t]
-				for t in range(len(GT)):
-					print '\tsnapshot', t, ' gfinal', gfinals[t]
-				for t in range(len(GT)):
-					if t == len(GT) - 1:
-						continue
-					print '\tsnapshot', t, ' mfinal', mfinals[t]
-				print '\txifinal', xifinal
-				print '\twfinal', wfinal
-
-			return ghats, gfinals, mfinals, w_hats, wfinal, xifinal, [time1, time2, time3]
+		return ghats, gfinals, mfinals, w_hats, wfinal, xifinal, [time1, time2, time3]
 
 
 #Modified Estimator for Zhang 2016 Model A that Includes Arriving/Departing Nodes

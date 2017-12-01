@@ -128,7 +128,7 @@ def plot_fixed_bernoulli(fname,flag_write=False,debug=False):
 	# title='FCLP-Bernoulli: Error in the estimation of Groups'
 	# plot_error_vs_time(ts_errormeang,time,title,ts_errorstdg,flag_write=flag_write)
 
-def plot_changing_mm(fname,flag_write=False,debug=False):
+def plot_changing_mm(fname,flag_write=False,debug=True):
 	rawdata = pickle.load(open(fname,'rb'))
 	log= rawdata['log']
 	params = rawdata['params']
@@ -171,6 +171,6 @@ def plot_changing_mm(fname,flag_write=False,debug=False):
 	plot_error_vs_time(ts_meanxi,time,title,flag_write=flag_write)
 
 if __name__ == '__main__':
-	plot_fixed_lazy('./output/explog_fixed_lazy.pkl',flag_write=False)
+	# plot_fixed_lazy('./output/explog_fixed_lazy.pkl',flag_write=False)
 	# plot_fixed_bernoulli('./output/explog_fixed_bernoulli.pkl',flag_write=False)
-	# plot_changing_mm('./output/explog_changing_mm.pkl',flag_write=False)
+	plot_changing_mm('./output/explog_changing_mm.pkl',flag_write=False)

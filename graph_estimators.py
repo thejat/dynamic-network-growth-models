@@ -749,21 +749,21 @@ class EstimatorChangingGroupMM(object):
 	def remove_minorities(self, GT):
 
 		GT_minorities_removed = [GT[0]]
-		for t,G in enumerate(GT):
-			if t==0:
-				continue
+		for i in GT_minorities_removed[0].nodes():
+			GT_minorities_removed[0].node[i]['majority'] = 1
+
+
+		for t in range(1,len(GT)):
 			# print '\t\t t index', t
 			Gnew = nx.Graph()
 
 			# print 'previous graph nodes:' , GT_minorities_removed[t-1].nodes()
 
 			for i in GT_minorities_removed[t-1].nodes():
-				if GT_minorities_removed[t-1].node[i]['majority']==0:
-					continue
-				else:
-					Gnew.add_node(i, group=G.node[i]['group'], majority=1)
+				if GT[t-1].node[i]['majority']==1:
+					Gnew.add_node(i, group=GT[t].node[i]['group'],majority=1)
 
-			for e in GT_minorities_removed[t-1].edges():
+			for e in GT[t-1].edges():
 				if e[0] in Gnew.nodes() and e[1] in Gnew.nodes():
 					Gnew.add_edge(e[0],e[1])
 
@@ -771,6 +771,7 @@ class EstimatorChangingGroupMM(object):
 
 
 			# print 'next graph nodes:    ' , GT_minorities_removed[t].nodes()
+
 
 		
 		return GT_minorities_removed

@@ -809,6 +809,105 @@ class EstimatorChangingGroupMM(object):
 
 		return ghats, gfinals, mfinals, w_hats, wfinal, xifinal, times
 
+# Proposed Estimator for the Majority Lazy Model Keeping Minorities*NEW*
+class EstimatorChangingGroupMM_keeping(object):
+
+	def remove_minorities(self, GT):
+
+		GT_minorities_removed = [GT[0]]
+		for i in GT_minorities_removed[0].nodes():
+			GT_minorities_removed[0].node[i]['majority'] = 1
+
+		for t in range(1, len(GT)):
+			# print '\t\t t index', t
+			Gnew = nx.Graph()
+
+			# print 'previous graph nodes:' , GT_minorities_removed[t-1].nodes()
+
+			for i in GT_minorities_removed[t - 1].nodes():
+				if GT[t - 1].node[i]['majority'] == 1:
+					Gnew.add_node(i, group=GT[t].node[i]['group'], majority=1)
+
+			for e in GT[t - 1].edges():
+				if e[0] in Gnew.nodes() and e[1] in Gnew.nodes():
+					Gnew.add_edge(e[0], e[1])
+
+			return Gnew
+
+		# print 'next graph nodes:    ' , GT_minorities_removed[t].nodes()
+
+
+
+		return GT_minorities_removed
+
+
+	def remove_majorities(self, GT):
+
+		GT_majorities_removed = [GT[0]]
+		for i in GT_majorities_removed[0].nodes():
+			GT_majorities_removed[0].node[i]['majority'] = 0
+
+		for t in range(1, len(GT)):
+			# print '\t\t t index', t
+			Gnew = nx.Graph()
+
+			# print 'previous graph nodes:' , GT_majorities_removed[t-1].nodes()
+
+			for i in GT_majorities_removed[t - 1].nodes():
+				if GT[t - 1].node[i]['majority'] == 0:
+					Gnew.add_node(i, group=GT[t].node[i]['group'], majority=0)
+
+			for e in GT[t - 1].edges():
+				if e[0] in Gnew.nodes() and e[1] in Gnew.nodes():
+					Gnew.add_edge(e[0], e[1])
+
+			#GT_majorities_removed.append(Gnew)
+
+		# print 'next graph nodes:    ' , GT_minorities_removed[t].nodes()
+
+
+
+		return Gnew
+
+	# def relate_maj_min(self, remove_majorities(self, GT), remove_minorities(self, GT)):
+
+	# 	for 
+
+
+	def estimate_params(self, GT, k=2, W=np.eye(2), xi=1, ngridpoints=21, debug=False):
+
+		GT_minorities_removed = self.remove_minorities(GT)
+
+		debug = True
+		if debug:
+			for i, G in enumerate(GT_minorities_removed):
+				print i, G.nodes()
+
+		ghats, gfinal, w_hats, wfinal, xifinal, times = EstimatorFixedGroupLazy().estimate_params(
+			GT_minorities_removed, k, W, ngridpoints)
+
+		# Temporary default value
+		mfinals = {}
+		gfinals = {}
+		for t, G in enumerate(GT):
+			mfinals[t] = None  # TBD
+			gfinals[t] = gfinal
+
+		if debug:
+			for t in range(len(GT)):
+				print '\tsnapshot', t, ' ghat  ', ghats[t]
+			for t in range(len(GT)):
+				print '\tsnapshot', t, ' gfinal', gfinals[t]
+			for t in range(len(GT)):
+				if t == len(GT) - 1:
+					continue
+				print '\tsnapshot', t, ' mfinal', mfinals[t]
+			print '\txifinal', xifinal
+			print '\twfinal', wfinal
+
+		return ghats, gfinals, mfinals, w_hats, wfinal, xifinal, times
+
+
 
 #Modified Estimator for Zhang 2016 Model A that Includes Arriving/Departing Nodes
 class EstimatorZhangAModified(object):

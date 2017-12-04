@@ -74,6 +74,8 @@ def plot_fixed_lazy(fname,flag_write=False,debug=True):
 	plot_error_vs_time(ts_errormeanw,time,title,ts_errorstdw,flag_write)
 	title='FCLP-LazyRW: Error in the estimation of Xi'
 	plot_error_vs_time(ts_errormeanxi,time,title,ts_errorstdxi,flag_write)
+	title='FCLP-LazyRW: Estimation of Xi'
+	plot_error_vs_time(ts_meanxi,time,title,flag_write=flag_write)
 	# title='FCLP-LazyRW: Error in the estimation of Groups'
 	# plot_error_vs_time(ts_errormeang,time,title,ts_errorstdg,flag_write)
 

@@ -165,14 +165,14 @@ def plot_changing_mm(fname,flag_write=False,debug=True):
 		pprint.pprint(ts_meanxi)
 
 	time = range(1,params['total_time'])
-	title='CLPM: Error in the estimation of W'
+	title='CLP: Error in the estimation of W'
 	plot_error_vs_time(ts_errormeanw,time,title,ts_errorstdw,flag_write)
-	title='CLPM: Error in the estimation of Xi'
+	title='CLP: Error in the estimation of Xi'
 	plot_error_vs_time(ts_errormeanxi,time,title,ts_errorstdxi,flag_write)
-	title='CLPM: Estimation of Xi'
+	title='CLP: Estimation of Xi'
 	plot_error_vs_time(ts_meanxi,time,title,flag_write=flag_write)
 
 if __name__ == '__main__':
 	# plot_fixed_lazy('./output/explog_fixed_lazy.pkl',flag_write=False)
 	# plot_fixed_bernoulli('./output/explog_fixed_bernoulli.pkl',flag_write=False)
-	plot_changing_mm('./output/explog_changing_mm.pkl',flag_write=False)
+	plot_changing_mm('./output/explog_changing_mm.pkl',flag_write=True)

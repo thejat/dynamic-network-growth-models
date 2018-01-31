@@ -2,6 +2,7 @@
 import numpy as np
 import time, pprint, copy
 import networkx as nx
+
 # import community
 from graph_tool import Graph, collection, inference
 import pulp #tbd: gurobipy/cplex
@@ -824,9 +825,9 @@ class EstimatorChangingGroupMM_keeping(object):
 
 			# print 'previous graph nodes:' , GT_minorities_removed[t-1].nodes()
 
-			for i in GT_minorities_removed[t - 1].nodes():
+			for i in GT_minoritiodes():
 				if GT[t - 1].node[i]['majority'] == 1:
-					Gnew.add_node(i, group=GT[t].node[i]['group'], majority=1)
+					Gnew.add_node(i, group=GT[t].es_removed[t - 1].nnode[i]['group'], majority=1)
 
 			for e in GT[t - 1].edges():
 				if e[0] in Gnew.nodes() and e[1] in Gnew.nodes():
@@ -869,43 +870,53 @@ class EstimatorChangingGroupMM_keeping(object):
 
 		return Gnew
 
-	# def relate_maj_min(self, remove_majorities(self, GT), remove_minorities(self, GT)):
+	def relate_maj_min(self, G, Gmaj, Gmin, k):
+		ghatmaj= EstimatorUtility().graph_tool_community(Gmaj,k)
+		ghatmin= EstimatorUtility().graph_tool_community(Gmin,k)
 
-	# 	for 
+		count={}
+		for l in range(k+1):
+			for u in range(k+1):
+				count[(l, u)] = 0
+				for i in ghatmaj[l].key:
+					for j in ghatmin[u].key:
+						if (i,j) in G.edge:
+									count[(l, u)] +=1
+			u=np.argmax(count)
 
 
 	def estimate_params(self, GT, k=2, W=np.eye(2), xi=1, ngridpoints=21, debug=False):
 
-		GT_minorities_removed = self.remove_minorities(GT)
+			GT_minorities_removed = self.remove_minorities(GT)
 
-		debug = True
-		if debug:
-			for i, G in enumerate(GT_minorities_removed):
-				print i, G.nodes()
+			debug = True
+			if debug:
+				for i, G in enumerate(GT_minorities_removed):
+					print i, G.nodes()
 
-		ghats, gfinal, w_hats, wfinal, xifinal, times = EstimatorFixedGroupLazy().estimate_params(
-			GT_minorities_removed, k, W, ngridpoints)
+			ghats, gfinal, w_hats, wfinal, xifinal, times = EstimatorFixedGroupLazy().estimate_params(
+				GT_minorities_removed, k, W, ngridpoints)
 
-		# Temporary default value
-		mfinals = {}
-		gfinals = {}
-		for t, G in enumerate(GT):
-			mfinals[t] = None  # TBD
-			gfinals[t] = gfinal
+			# Temporary default value
+			mfinals = {}
+			gfinals = {}
+			for t, G in enumerate(GT):
+				mfinals[t] = None  # TBD
+				gfinals[t] = gfinal
 
-		if debug:
-			for t in range(len(GT)):
-				print '\tsnapshot', t, ' ghat  ', ghats[t]
-			for t in range(len(GT)):
-				print '\tsnapshot', t, ' gfinal', gfinals[t]
-			for t in range(len(GT)):
-				if t == len(GT) - 1:
-					continue
-				print '\tsnapshot', t, ' mfinal', mfinals[t]
-			print '\txifinal', xifinal
-			print '\twfinal', wfinal
+			if debug:
+				for t in range(len(GT)):
+					print '\tsnapshot', t, ' ghat  ', ghats[t]
+				for t in range(len(GT)):
+					print '\tsnapshot', t, ' gfinal', gfinals[t]
+				for t in range(len(GT)):
+					if t == len(GT) - 1:
+						continue
+					print '\tsnapshot', t, ' mfinal', mfinals[t]
+				print '\txifinal', xifinal
+				print '\twfinal', wfinal
 
-		return ghats, gfinals, mfinals, w_hats, wfinal, xifinal, times
+			return ghats, gfinals, mfinals, w_hats, wfinal, xifinal, times
 
 
 

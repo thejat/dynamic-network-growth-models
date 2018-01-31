@@ -45,6 +45,8 @@ def generate_fixed_group_bernoulli(Mu = np.eye(2), W=np.matrix([[0.1, 0.2], [0.2
     print '\tTime taken:', time.time() - st
     return GT
 
+generate_fixed_group_bernoulli(Mu = np.eye(2), W=np.matrix([[0.1, 0.2], [0.2, 0.1]]), n = 10, k = 2, flag_draw = True, total_time = 2)
+
 def generate_fixed_group_lazy(xi=0.5,W=np.eye(2),n=10,k=2,flag_draw=False,total_time=2):
 
 	st = time.time()
@@ -54,7 +56,7 @@ def generate_fixed_group_lazy(xi=0.5,W=np.eye(2),n=10,k=2,flag_draw=False,total_
 	Goriginal=nx.Graph()
 	for i in range(1,n+1):
 		Goriginal.add_node(i,group=np.random.choice(range(1,k+1),1)) #fixing groups
-	
+
 	for j in range(1,n+1):
 		for i in range(1,j):
 			if np.random.rand() <= W[Goriginal.node[i]['group']-1,Goriginal.node[j]['group']-1]:
@@ -94,8 +96,10 @@ def generate_fixed_group_lazy(xi=0.5,W=np.eye(2),n=10,k=2,flag_draw=False,total_
 			plt.show()  # pyplot draw()
 
 	print "\tTime taken:",time.time() - st
-
 	return GT
+
+generate_fixed_group_lazy(xi=0.5, W=np.eye(2), n=10, k=2, flag_draw=False, total_time=2)
+
 
 def generate_changing_group_MM(minority_pct_ub=0.4, xi=1, W=np.matrix('0.9 0.1; 0.1 0.9'), n=20, k=2, flag_draw=True, total_time=2,debug=False):
     st = time.time()

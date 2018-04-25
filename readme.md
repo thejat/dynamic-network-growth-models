@@ -1,6 +1,6 @@
-### Code for the paper "New Algorithms for Inference in Graph Sequence Models" (2017)
+### Code for the paper "Block-Structure Based Time-Series Models For Graph Sequences" (2017)
 
-This codebase is for algorithms proposed in the aforementioned [paper](https://theja.org/#). It consists of the following python scripts:
+This codebase is for algorithms proposed in the aforementioned [paper](https://arxiv.org/abs/1804.08796). It consists of the following python scripts:
 
   * graph_generators.py : has the synthetic/real instance generators
   * graph_estimators.py : has the proposed algorithms

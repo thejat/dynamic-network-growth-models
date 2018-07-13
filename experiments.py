@@ -6,41 +6,6 @@ from graph_generators import generate_Zhang_modelA_modified, generate_fixed_grou
 from graph_estimators import EstimatorZhangAModified, EstimatorFixedGroupLazy, EstimatorFixedGroupBernoulli, EstimatorChangingGroupMM
 import time, pickle
 
-def run_experiment_Zhang_modelA_modified():
-
-	#Legacy below
-
-	# alphaTrue = 0.7
-	# betaTrue = 0.4
-
-	# st = time.time()
-	# GT = generate_Zhang_modelA_modified(alpha=alphaTrue,beta=betaTrue,n0=20,flag_draw=False,total_time=1000,flag_arrivals=False)
-	# print "generated data, time taken:",time.time() - st
-
-	# st = time.time() 	
-	# alpha,beta = estimate_random_dynamic_no_arrival_recursive(GT)
-	# print "estimated from data, time taken: ",time.time() - st
-	# print "True vals: alpha",alphaTrue," beta",betaTrue
-	# print "Estimates: alpha",alpha," beta ",beta
-	
-	# st = time.time()
-	# alpha,beta = estimate_random_dynamic_no_arrival_gridsearch(GT)
-	# print "estimated from data, time taken: ",time.time() - st
-	# print "True vals: alpha",alphaTrue," beta",betaTrue
-	# print "Estimates: alpha",alpha," beta ",beta
-
-	#Legacy above
-
-	lmbdTrue = 0.7
-	muTrue = 0.4
-
-	GT = generate_Zhang_modelA_modified(alpha=lmbdTrue,beta=muTrue,n0=20,flag_draw=False,total_time=10,flag_arrivals=True)
-	
-	lmbd,mu = EstimatorZhangAModified().estimate_random_dynamic_with_arrival_recursive(GT)
-
-	print "True vals: lambda",lmbdTrue," mu",muTrue
-	print "Estimates: lambda",lmbd," mu ",mu
-
 def run_experiment_fixed_group_lazy(fname):
 	debug = False
 	params = {}

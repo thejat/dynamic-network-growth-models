@@ -14,4 +14,3 @@ The easiest way to get started is to look at experiments.py and go from there.
 These are: numpy, networkx, [graph-tool](https://graph-tool.skewed.de/)
 
 Please make a pull request if you spot bugs or have suggestions!
-Last model will change.

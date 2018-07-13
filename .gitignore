@@ -3,3 +3,5 @@
 *others
 *.pkl
 output/
+data/
+.DS_Store

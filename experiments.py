@@ -1,151 +1,70 @@
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
-np.random.seed(1000)
-from graph_generators import generate_Zhang_modelA_modified, generate_fixed_group_lazy, generate_fixed_group_bernoulli, generate_changing_group_MM
-from graph_estimators import EstimatorZhangAModified, EstimatorFixedGroupLazy, EstimatorFixedGroupBernoulli, EstimatorChangingGroupMM
+from graph_generators import generate_fixed_group
+# from graph_estimators import EstimatorFixedGroupLazy, EstimatorFixedGroupBernoulli, EstimatorChangingGroupMM
 import time, pickle
 
-def run_experiment_fixed_group_lazy(fname):
-	debug = False
-	params = {}
-	params['n_mcruns'] 		=   10#10
-	params['total_time'] 	=   10#30
-	params['xitrue'] 		=   .2
-	params['Wtrue'] 		= np.array([[.8,.2],[.2,.8]])#[[1,.0],[.0,1]])# #np.random.rand(k,k)
-	params['k'] 			= params['Wtrue'].shape[0]
-	params['n'] 			=   30#100
-	params['ngridpoints']	=   21
-	start_time = time.time()
 
-	def save_estimates(params):
-		# GT = generate_fixed_group_lazy(xi=params['xitrue'],W=params['Wtrue'],n=params['n'],k=params['k'],
-							# flag_draw=False,total_time=params['total_time'])
+#helper functions
+def localtime():
+	return '_'.join([str(x) for x in time.localtime()[:5]])
 
-		GT = generate_changing_group_MM(minority_pct_ub=0,xi=params['xitrue'],W=params['Wtrue'],
-				n=params['n'],k=params['k'], flag_draw=False,total_time=params['total_time'])
-		t_t 	  = []
-		t_gfinal  = []
-		t_wfinal  = []
-		t_xifinal = []
-		t_timing  = []
-		for t in range(2,params['total_time']+1):
-			print "  Estimating with number of snaps: ",t, " of", params['total_time'], ": starting at time", time.time()-start_time
-			ghats,gfinal,w_hats,wfinal,xifinal,times = EstimatorFixedGroupLazy().estimate_params(GT[:t],params['k'],params['Wtrue'],params['ngridpoints'])
-			t_gfinal.append(gfinal)
-			t_wfinal.append(wfinal)
-			t_xifinal.append(xifinal)
-			t_t.append(t)
-			t_timing.append(times)
-		return {'graphs':GT,'gfinals':t_gfinal,'xifinals':t_xifinal,'n_snapshots':t_t,'wfinals':t_wfinal,'comptime':t_timing}
+def estimate(params):
+
+	return None
+
+	t_t 	  = []
+	t_gfinal  = []
+	t_wfinal  = []
+	t_xifinal = [] # [lazy]
+	t_mufinal = [] # [bernoulli]
+	t_timing  = []
+	for t in range(2,params['total_time']+1):
+		print("  Estimating with number of snaps: ",t, " of", params['total_time'], ": starting at time", time.time()-params['start_time'])
+		ghats,gfinal,w_hats,wfinal,xifinal,times = EstimatorFixedGroupLazy().estimate_params(GT[:t],params['k'],params['Wtrue'],params['ngridpoints']) #d
+		t_gfinal.append(gfinal)
+		t_wfinal.append(wfinal)
+		t_xifinal.append(xifinal) #d
+		t_t.append(t)
+		t_timing.append(times)
+	return {'graphs':GT,'gfinals':t_gfinal,'xifinals':t_xifinal,'n_snapshots':t_t,'wfinals':t_wfinal,'comptime':t_timing} #d
 
 
-	log = {}
-	for mcrun in range(params['n_mcruns']):
-		print "Estimation Monte Carlo Run # ",mcrun+1, " of ",params['n_mcruns']
-		log[mcrun] = save_estimates(params)
-		print "  Run funish time:", time.time()-start_time
-
-		print 'Saving a log of the experiment. This will be overwritten.'
-		pickle.dump({'log':log,'params':params},open(fname,'wb'))
-		print 'Experiment end time:', time.time()-start_time
-
-def run_experiment_fixed_group_bernoulli(fname):
-	debug = False
-	params = {}
-	params['n_mcruns'] 		=  10
-	params['total_time'] 	=  30
-	params['Mutrue'] 		= np.array([[.5,.5],[.2,.6]])
-	params['Wtrue'] 		= np.array([[.7,.1],[.1,.7]])#[[1,.0],[.0,1]])# #np.random.rand(k,k)
-	params['k'] 			= params['Wtrue'].shape[0]
-	params['n'] 			= 100
-	params['ngridpoints']	=  41
-	start_time = time.time()
-
-	def save_estimates(params):
-		GT = generate_fixed_group_bernoulli(Mu = params['Mutrue'], W=params['Wtrue'], n=params['n'],k=params['k'],
-		   					flag_draw=False, total_time = params['total_time'])
-		t_t 	  = []
-		t_gfinal  = []
-		t_wfinal  = []
-		t_mufinal = []
-		t_timing  = []
-		for t in range(2,params['total_time']+1):
-			print "  Estimating with number of snaps: ",t, " of", params['total_time'], ": starting at time", time.time()-start_time
-			ghats,gfinal,w_hats,wfinal,mufinal,times = EstimatorFixedGroupBernoulli().estimate_params(GT[:t],params['k'],params['Wtrue'],params['Mutrue'],params['ngridpoints'])
-			t_gfinal.append(gfinal)
-			t_wfinal.append(wfinal)
-			t_mufinal.append(mufinal)
-			t_t.append(t)
-			t_timing.append(times)
-		return {'graphs':GT,'gfinals':t_gfinal,'mufinals':t_mufinal,'n_snapshots':t_t,'wfinals':t_wfinal,'comptime':t_timing}
-
-
-	log = {}
-	for mcrun in range(params['n_mcruns']):
-		print "Estimation Monte Carlo Run # ",mcrun+1, " of ",params['n_mcruns']
-		log[mcrun] = save_estimates(params)
-		print "  Run funish time:", time.time()-start_time
-
-		print 'Saving a log of the experiment. This will be overwritten.'
-		pickle.dump({'log':log,'params':params},open(fname,'wb'))
-		print 'Experiment end time:', time.time()-start_time
-
-def run_experiment_changing_group_MM(fname):
-	debug = False
-	params = {}
-	params['n_mcruns'] 		=     10
-	params['total_time'] 	=     15
-	params['xitrue'] 		=     .2
-	params['Wtrue'] 		= np.array([[.8,.2],[.2,.8]])
-	params['k'] 			= params['Wtrue'].shape[0]
-	params['n'] 			=     30
-	params['minority_pct_ub'] =  .05
-	params['ngridpoints']	=     21
-	start_time = time.time()
-
-	def save_estimates(params):
-		GT = generate_changing_group_MM(minority_pct_ub=params['minority_pct_ub'],xi=params['xitrue'],W=params['Wtrue'],
-				n=params['n'],k=params['k'], flag_draw=False,total_time=params['total_time'])
-		t_t 	  = []
-		t_gfinals = []
-		t_mfinals = []
-		t_wfinal  = []
-		t_xifinal = []
-		t_timing  = []
-		for t in range(2,params['total_time']+1):
-			print "  Estimating with number of snaps: ",t, " of", params['total_time'], ": starting at time", time.time()-start_time
-			ghats,gfinals,mfinals,w_hats,wfinal,xifinal,times = EstimatorChangingGroupMM().estimate_params(GT[:t],params['k'],params['Wtrue'],params['xitrue'],params['ngridpoints'])
-
-			t_gfinals.append(gfinals)
-			t_mfinals.append(mfinals)
-			t_wfinal.append(wfinal)
-			t_xifinal.append(xifinal)
-			t_t.append(t)
-			t_timing.append(times)
-		return {'graphs':GT,'gfinalst':t_gfinals,'mfinalst':t_mfinals,'xifinals':t_xifinal,'n_snapshots':t_t,'wfinals':t_wfinal,'comptime':t_timing}
-
-
-	log = {}
-	for mcrun in range(params['n_mcruns']):
-		print "Estimation Monte Carlo Run # ",mcrun+1, " of ",params['n_mcruns']
-		log[mcrun] = save_estimates(params)
-		print "  Run funish time:", time.time()-start_time
-
-		print 'Saving a log of the experiment. This will be overwritten.'
-		pickle.dump({'log':log,'params':params},open(fname,'wb'))
-		print 'Experiment end time:', time.time()-start_time
 
 if __name__=='__main__':
 
-	#Zhang Model A Modified
-	# run_experiment_Zhang_modelA_modified()
+	dynamic = 'bernoulli'
+	# dynamic = 'lazy'
 
-	#Majority/Minority model
-	run_experiment_changing_group_MM('./output/explog_changing_mm.pkl')
+	#common parameters
+	np.random.seed(1000)
+	debug = False
+	fname = './output/log_'+dynamic+'_'+localtime()+'.pkl'
+	params = {}
+	params['n_mcruns'] 		=   3 # number of monte carlo runs potentially in parallel
+	params['total_time'] 	=   5 # number of additional graph snapshots
+	params['estimation_indices'] = [params['total_time']]
+	params['xitrue'] 		=   .2 # [lazy]
+	params['Mutrue'] 		= np.array([[.5,.5],[.2,.6]])# [bernoulli]
+	params['Wtrue'] 		= np.array([[.8,.2],[.2,.8]])
+	params['k'] 			= params['Wtrue'].shape[0] # number of communities
+	params['n'] 			=   20# size of the graph
+	params['ngridpoints']	=   21# grid search parameter
+	params['start_time'] = time.time()
 
-	#Fixed Group Lazy
-	# run_experiment_fixed_group_lazy('./output/explog_fixed_lazy.pkl')
+	#Get all graphs
+	GTs = []
+	for mcrun in range(params['n_mcruns']):
+		print("Generate data: Monte Carlo Run # ",mcrun+1, " of ",params['n_mcruns'],' starting: ',time.time() - params['start_time'])
 
-	#Fixed group Bernoulli
-	# run_experiment_fixed_group_bernoulli('./output/explog_fixed_bernoulli.pkl')
+		GTs.append(generate_fixed_group(dynamic,params['xitrue'],params['Mutrue'],params['Wtrue'],params['n'],params['k'],params['total_time']))
+
+	#Estimate parameters on each of the graphs at the given time indices
+	log = {}
+	for mcrun in range(params['n_mcruns']):
+		print("Estimate: Monte Carlo Run # ",mcrun+1, " of ",params['n_mcruns'],' starting: ',time.time() - params['start_time'])
+		log[mcrun] = estimate(params)
+		print("\t   Run funish time:", time.time()-params['start_time'])
+		pickle.dump({'log':log,'params':params},open(fname,'wb'))
+		print('Experiment end time:', time.time()-params['start_time'])

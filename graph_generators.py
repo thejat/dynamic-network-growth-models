@@ -22,13 +22,13 @@ def generate_fixed_group(dynamic,xi,Mu,W,n,k,total_time):
 
 	#Create the first graph
 	st = time.time()
-	print("Generating data for the", dynamic, "dynamic")
+	print("\t Generating GT sequence for the", dynamic, "dynamic")
 	Goriginal = generate_initial_graph(n,k,W)
 
 	#Create the subsequent total_time number of graphs indexed from 1 to total_time
 	GT = [Goriginal]
 	for t in range(1,total_time+1): #t = 1,2,...,T
-		print('\tGraph at snapshot', t, ' time', time.time() - st)
+		print('\t\tGraph at snapshot', t, ' time', time.time() - st)
 		Gcurrent = nx.Graph()
 		for node in GT[t-1].nodes(data=True):
 			Gcurrent.add_node(node[0],group=node[1]['group'])
@@ -57,7 +57,7 @@ def generate_fixed_group(dynamic,xi,Mu,W,n,k,total_time):
 			raise NotImplementedError
 
 		GT.append(Gcurrent)
-	print('\tTime taken:', time.time() - st)
+	print('\tTime taken by the function:', time.time() - st)
 	return GT
 
 

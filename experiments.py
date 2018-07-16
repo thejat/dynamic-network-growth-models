@@ -2,33 +2,26 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 from graph_generators import generate_fixed_group
-# from graph_estimators import EstimatorFixedGroupLazy, EstimatorFixedGroupBernoulli, EstimatorChangingGroupMM
+from graph_estimators1 import EstimatorFixedGroupLazy, EstimatorFixedGroupBernoulli
 import time, pickle
-
+from multiprocessing.pool import ThreadPool as Pool
 
 #helper functions
 def localtime():
 	return '_'.join([str(x) for x in time.localtime()[:5]])
 
-def estimate(params):
+def estimate_multiple_times(params,GT,estimator=None):
 
-	return None
-
-	t_t 	  = []
-	t_gfinal  = []
-	t_wfinal  = []
-	t_xifinal = [] # [lazy]
-	t_mufinal = [] # [bernoulli]
-	t_timing  = []
-	for t in range(2,params['total_time']+1):
-		print("  Estimating with number of snaps: ",t, " of", params['total_time'], ": starting at time", time.time()-params['start_time'])
-		ghats,gfinal,w_hats,wfinal,xifinal,times = EstimatorFixedGroupLazy().estimate_params(GT[:t],params['k'],params['Wtrue'],params['ngridpoints']) #d
-		t_gfinal.append(gfinal)
-		t_wfinal.append(wfinal)
-		t_xifinal.append(xifinal) #d
-		t_t.append(t)
-		t_timing.append(times)
-	return {'graphs':GT,'gfinals':t_gfinal,'xifinals':t_xifinal,'n_snapshots':t_t,'wfinals':t_wfinal,'comptime':t_timing} #d
+	assert estimator is not None
+	estimates_list =[]
+	for t in params['estimation_indices']:
+		if t < 1:
+			return NotImplementedError #incorrect tbd
+		else:
+			print("  Estimating on sequence of length: ",t, " starting at time ", time.time()-params['start_time'])
+			estimates = estimator().estimate_params(params,GT[:t])
+		estimates_list.append(estimates)	
+	return estimates
 
 
 
@@ -42,29 +35,60 @@ if __name__=='__main__':
 	debug = False
 	fname = './output/log_'+dynamic+'_'+localtime()+'.pkl'
 	params = {}
-	params['n_mcruns'] 		=   3 # number of monte carlo runs potentially in parallel
+	params['n_mcruns'] 		=   1 # number of monte carlo runs potentially in parallel
 	params['total_time'] 	=   5 # number of additional graph snapshots
 	params['estimation_indices'] = [params['total_time']]
 	params['xitrue'] 		=   .2 # [lazy]
 	params['Mutrue'] 		= np.array([[.5,.5],[.2,.6]])# [bernoulli]
 	params['Wtrue'] 		= np.array([[.8,.2],[.2,.8]])
 	params['k'] 			= params['Wtrue'].shape[0] # number of communities
-	params['n'] 			=   20# size of the graph
+	params['n'] 			=   30# size of the graph
 	params['ngridpoints']	=   21# grid search parameter
-	params['start_time'] = time.time()
+	params['start_time'] 	= time.time()
+	params['processes'] 	= 10
+
+	if dynamic=='lazy':
+		estimator = EstimatorFixedGroupLazy
+	elif dynamic=='bernoulli':
+		estimator = EstimatorFixedGroupBernoulli
+	else:
+		 estimator = None
+
 
 	#Get all graphs
 	GTs = []
+
+	# #pool version
+	# gfg_arg_list = []
+	# for mcrun in range(params['n_mcruns']):
+	# 	gfg_arg_list.append(
+	# 		(dynamic,params['xitrue'],params['Mutrue'],params['Wtrue'],params['n'],params['k'],params['total_time'],params['start_time'])
+	# 		# {'dynamic':dynamic,
+	# 		# 'xi':params['xitrue'],
+	# 		# 'Mu': params['Mutrue'],
+	# 		# 'W': params['Wtrue'],
+	# 		# 'n': params['n'],
+	# 		# 'k':params['k'],
+	# 		# 'total_time': params['total_time'],
+	# 		# 'start_time': params['start_time']}
+	# 		)
+	# pool = Pool(params['processes'])
+	# for GT in pool.imap_unordered(generate_fixed_group, gfg_arg_list):
+	# 	print("Generate data: Monte Carlo Run # ",mcrun+1, " of ",params['n_mcruns'],' starting: ',time.time() - params['start_time'])
+	# 	GTs.append(GT)
+
+
 	for mcrun in range(params['n_mcruns']):
 		print("Generate data: Monte Carlo Run # ",mcrun+1, " of ",params['n_mcruns'],' starting: ',time.time() - params['start_time'])
 
-		GTs.append(generate_fixed_group(dynamic,params['xitrue'],params['Mutrue'],params['Wtrue'],params['n'],params['k'],params['total_time']))
+		GTs.append(generate_fixed_group(dynamic,params['xitrue'],params['Mutrue'],params['Wtrue'],params['n'],params['k'],params['total_time'],params['start_time']))
 
 	#Estimate parameters on each of the graphs at the given time indices
 	log = {}
 	for mcrun in range(params['n_mcruns']):
 		print("Estimate: Monte Carlo Run # ",mcrun+1, " of ",params['n_mcruns'],' starting: ',time.time() - params['start_time'])
-		log[mcrun] = estimate(params)
+		log[mcrun] = estimate_multiple_times(params,GTs[mcrun],estimator)
 		print("\t   Run funish time:", time.time()-params['start_time'])
 		pickle.dump({'log':log,'params':params},open(fname,'wb'))
-		print('Experiment end time:', time.time()-params['start_time'])
+	
+	print('Experiment end time:', time.time()-params['start_time'])

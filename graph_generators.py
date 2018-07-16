@@ -14,15 +14,15 @@ def generate_initial_graph(n,k,W):
 				Goriginal.add_edge(i,j)
 	return Goriginal
 
-def generate_fixed_group(dynamic,xi,Mu,W,n,k,total_time):
+def generate_fixed_group(dynamic,xi,Mu,W,n,k,total_time,log_start_time=time.time()):
 	'''
 	Graph at 0 is the single original graph
 	Graphs at times t-1,...,total_time are the evolved ones
 	'''
 
 	#Create the first graph
-	st = time.time()
-	print("\t Generating GT sequence for the", dynamic, "dynamic")
+	st = log_start_time
+	print("\tGenerating GT sequence for the", dynamic, "dynamic")
 	Goriginal = generate_initial_graph(n,k,W)
 
 	#Create the subsequent total_time number of graphs indexed from 1 to total_time
@@ -59,20 +59,6 @@ def generate_fixed_group(dynamic,xi,Mu,W,n,k,total_time):
 		GT.append(Gcurrent)
 	print('\tTime taken by the function:', time.time() - st)
 	return GT
-
-
-def generate_fixed_group_bernoulli(Mu = np.eye(2), W=np.matrix([[0.1, 0.2], [0.2, 0.1]]), n = 10, k = 2, flag_draw = True, total_time = 2):
-
-	dynamic='bernoulli'
-	xi = None
-	return generate_fixed_group(dynamic,xi,Mu,W,n,k,total_time)
-
-def generate_fixed_group_lazy(xi=0.5,W=np.eye(2),n=10,k=2,flag_draw=False,total_time=2):
-
-	dynamic='lazy'
-	Mu = None
-	return generate_fixed_group(dynamic,xi,Mu,W,n,k,total_time)
-
 
 
 # def generate_changing_group_MM(minority_pct_ub=0.4, xi=1, W=np.matrix('0.9 0.1; 0.1 0.9'), n=20, k=2, flag_draw=True, total_time=2,debug=False):
@@ -144,5 +130,6 @@ def generate_fixed_group_lazy(xi=0.5,W=np.eye(2),n=10,k=2,flag_draw=False,total_
 
 if __name__=='__main__':
 	np.random.seed(1000)
-	GT = generate_fixed_group_bernoulli(Mu = np.eye(2), W=np.matrix([[0.1, 0.2], [0.2, 0.1]]), n = 10, k = 2, total_time = 2)
-	GT = generate_fixed_group_lazy(xi=0.5, W=np.eye(2), n=10, k=2, total_time=2)
+	st = time.time()
+	GT = generate_fixed_group(dynamic='bernoulli', xi=None, Mu = np.eye(2), W=np.matrix([[0.1, 0.2], [0.2, 0.1]]), n = 10, k = 2, total_time = 2,log_start_time=st)
+	GT = generate_fixed_group(dynamic='lazy', xi=0.5, Mu = None, W=np.eye(2), n=10, k=2, total_time=2,log_start_time=st)

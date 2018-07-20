@@ -130,9 +130,9 @@ def get_communities_and_unify(params,GT):
 		ghats[t] = get_communities_single_graph(G,params['k'])
 
 	#Unify
-	if params['method']=='sets':
+	if params['unify_method']=='sets':
 		gfinal = unify_communities_sets(ghats,params['k'])
-	elif params['method']=='lp':
+	elif params['unify_method']=='lp':
 		gfinal = unify_communities_LP(ghats,params['k'])
 	else:
 		return NotImplementedError #incorrect tbd
@@ -228,11 +228,12 @@ def estimate_mu_and_w(params,GT,gfinal,w_hats):
 
 
 	#Estimate wfinal and mufinal
+	k = params['k']
 	wfinal = np.zeros((k,k))
 	mufinal = np.zeros((k,k))
 	for r in range(1,k+1):
 		for s in range(1,k+1):
-			mufinal[r-1,s-1],wfinal[r-1,s-1] = estimate_mu_and_w_given_r_s(w_hats,r,s,gfinal,GT,ngridpoints,debug=False)
+			mufinal[r-1,s-1],wfinal[r-1,s-1] = estimate_mu_and_w_given_r_s(w_hats,r,s,gfinal,GT,params['ngridpoints'],debug=False)
 
 	if params['debug']:
 		print('\tmufinal', mufinal)

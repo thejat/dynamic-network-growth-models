@@ -2,15 +2,14 @@ import numpy as np
 import pickle,pprint
 import seaborn as sns
 from matplotlib import pyplot as plt
-from graph_estimators import EstimatorFixedGroupLazy
 
+#Style
 plt.style.use('fivethirtyeight')
 plt.rcParams['font.family'] = 'serif'
 plt.rcParams['font.serif'] = 'Ubuntu'
 plt.rcParams['font.monospace'] = 'Ubuntu Mono'
 plt.rcParams['font.size'] = 30
 plt.rcParams['axes.labelsize'] = 30
-# plt.rcParams['axes.labelweight'] = 'bold'
 plt.rcParams['axes.titlesize'] = 30
 plt.rcParams['xtick.labelsize'] = 20
 plt.rcParams['ytick.labelsize'] = 20
@@ -52,7 +51,6 @@ def plot_fixed_lazy(fname,flag_write=False,debug=True):
 			ts_meanxi[t] += log[mcrun]['xifinals'][t]
 			ts_errorw[t,mcrun] = np.linalg.norm(params['Wtrue']-log[mcrun]['wfinals'][t],'fro')
 			ts_errorxi[t,mcrun] = abs(params['xitrue']-log[mcrun]['xifinals'][t])
-			ts_errorg[t,mcrun] = EstimatorFixedGroupLazy().get_group_error(log[mcrun]['graphs'][0],log[mcrun]['gfinals'][t],params['k'],debug=False)
 		ts_meanw[t] = ts_meanw[t]*1.0/len(log)
 		ts_meanxi[t] = ts_meanxi[t]*1.0/len(log)
 	ts_errormeanw = np.mean(ts_errorw,axis=1)
@@ -101,7 +99,6 @@ def plot_fixed_bernoulli(fname,flag_write=False,debug=False):
 			ts_meanmu[t] += log[mcrun]['mufinals'][t]
 			ts_errorw[t,mcrun] = np.linalg.norm(params['Wtrue']-log[mcrun]['wfinals'][t],'fro')
 			ts_errormu[t,mcrun] = np.linalg.norm(params['Mutrue']-log[mcrun]['mufinals'][t],'fro')
-			ts_errorg[t,mcrun] = EstimatorFixedGroupLazy().get_group_error(log[mcrun]['graphs'][0],log[mcrun]['gfinals'][t],params['k'],debug=False)
 
 		ts_meanw[t] = ts_meanw[t]*1.0/len(log)
 		ts_meanmu[t] = ts_meanmu[t]*1.0/len(log)

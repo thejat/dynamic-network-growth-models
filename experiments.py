@@ -2,9 +2,9 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 from graph_generators import generate_fixed_group
-from graph_estimators1 import EstimatorFixedGroupLazy, EstimatorFixedGroupBernoulli
+from graph_estimators import estimate_lazy, estimate_bernoulli #EstimatorFixedGroupLazy, EstimatorFixedGroupBernoulli
 import time, pickle
-from multiprocessing.pool import ThreadPool as Pool
+# from multiprocessing.pool import ThreadPool as Pool
 
 #helper functions
 def localtime():
@@ -19,7 +19,7 @@ def estimate_multiple_times(params,GT,estimator=None):
 			return NotImplementedError #incorrect tbd
 		else:
 			print("  Estimating on sequence of length: ",t, " starting at time ", time.time()-params['start_time'])
-			estimates = estimator().estimate_params(params,GT[:t])
+			estimates = estimator(params,GT[:t])
 		estimates_list.append(estimates)	
 	return estimates
 
@@ -46,13 +46,13 @@ if __name__=='__main__':
 	params['ngridpoints']	=   21# grid search parameter
 	params['start_time'] 	= time.time()
 	params['processes'] 	= 10
-	params['unify_method']  = 'sets' # 'lp'
+	params['unify_method']  = 'lp' # 'sets' # 
 	params['debug'] 		= False
 
 	if dynamic=='lazy':
-		estimator = EstimatorFixedGroupLazy
+		estimator = estimate_lazy
 	elif dynamic=='bernoulli':
-		estimator = EstimatorFixedGroupBernoulli
+		estimator = estimate_bernoulli
 	else:
 		 estimator = None
 

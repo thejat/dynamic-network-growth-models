@@ -46,6 +46,8 @@ if __name__=='__main__':
 	params['ngridpoints']	=   21# grid search parameter
 	params['start_time'] 	= time.time()
 	params['processes'] 	= 10
+	params['unify_method']  = 'sets' # 'lp'
+	params['debug'] 		= False
 
 	if dynamic=='lazy':
 		estimator = EstimatorFixedGroupLazy

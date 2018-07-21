@@ -169,7 +169,7 @@ def get_w_hats_at_each_timeindex(params,GT,gfinal):
 					if (x,y) in temp_edges or (y,x) in temp_edges:
 						rscount += 1 #edge representations in networkx are directed
 
-		print(r,s,rcount,scount,rscount)
+		# print(r,s,rcount,scount,rscount)
 		if r==s:
 			# in this case the mle is 2*number fo edges/((no of nodes)(no of nodes - 1)), 
 			# but we are already double counting rscount above
@@ -285,8 +285,6 @@ def estimate_xi_and_w(params,GT,gfinal,w_hats):
 			if candidate_score >= current_max:
 				xiopt = xivar
 				current_max = candidate_score
-		if debug:
-			print('score log: ',score_log)
 		return xiopt
 
 
@@ -299,7 +297,7 @@ def estimate_xi_and_w(params,GT,gfinal,w_hats):
 			wfinal[r-1,s-1] = estimate_w(w_hats,r,s)
 
 	#estimate xi by 1-d grid search
-	xifinal = self.estimate_xi(wfinal,gfinal,GT,ngridpoints)
+	xifinal = estimate_xi(wfinal,gfinal,GT,params['ngridpoints'])
 
 
 	if params['debug']:
@@ -314,7 +312,7 @@ def estimate_lazy(params,GT):
 	gfinal = get_communities_and_unify(params,GT)
 	w_hats = get_w_hats_at_each_timeindex(params,GT,gfinal)
 	wfinal,xifinal = estimate_xi_and_w(params,GT,gfinal,w_hats)
-	return gfinal,wfinal,xifinal
+	return {'gfinal':gfinal,'wfinal':wfinal,'xifinal':xifinal}
 
 #Proposed Estimator for the Fixed Group Bernoulli Model
 def estimate_bernoulli(params,GT):
@@ -322,4 +320,4 @@ def estimate_bernoulli(params,GT):
 	gfinal = get_communities_and_unify(params,GT)
 	w_hats = get_w_hats_at_each_timeindex(params,GT,gfinal)
 	wfinal,mufinal = estimate_mu_and_w(params,GT,gfinal,w_hats)
-	return gfinal,wfinal,mufinal
+	return {'gfinal':gfinal,'wfinal':wfinal,'mufinal':mufinal}

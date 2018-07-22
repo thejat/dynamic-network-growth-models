@@ -1,5 +1,5 @@
 import numpy as np
-import pickle, pprint, os, time
+import pickle, pprint, os, time, glob
 import seaborn as sns
 from matplotlib import pyplot as plt
 import pulp
@@ -61,7 +61,7 @@ def get_permutation_from_LP(Q1,Qt):
 
 
 
-def plot_error_vs_time(error,estimation_indices,error_std=None,flag_write=False):
+def plot_error_vs_time(error,estimation_indices,error_std=None,attribute='',flag_write=False):
 	error = np.array([error[x] for x in error])
 	error_std = np.array([error_std[x] for x in error_std])
 	
@@ -74,6 +74,7 @@ def plot_error_vs_time(error,estimation_indices,error_std=None,flag_write=False)
 	if error_std is not None:
 		ax.fill_between(estimation_indices, error+error_std, error-error_std, color='yellow', alpha=0.5)
 	plt.xlabel('Number of snapshots')
+	plt.title(attribute)
 	plt.show()
 	if flag_write:
 		fig.savefig('./output/'+'_'.join([str(x) for x in time.localtime()])+'.png', bbox_inches='tight', pad_inches=0.2)
@@ -84,12 +85,14 @@ def plot_fixed_group(fname,flag_write=False):
 
 	attributes = {'wfinal':{'true_name':'Wtrue'},'gfinal':{'true_name':'gtrue'}}
 	if params['dynamic']=='bernoulli':
-		attributes = {'wfinal':{'size':(params['k'],params['k']),'true_name':'Wtrue'},'mufinal':{'size':(params['k'],params['k']),'true_name':'Mutrue'}}
+		attributes['mufinal'] = {'true_name':'Mutrue'}
 	elif params['dynamic']=='lazy':
-		attributes = {'wfinal':{'size':(params['k'],params['k']),'true_name':'Wtrue'},'xifinal':{'size':1,'true_name':'xitrue'}}
+		attributes['xifinal'] = {'true_name':'xitrue'}
 	else:
-		return
+		return NotImplementedError
 	
+	def get_title(attribute,params):
+		return attribute+' '+params['dynamic']+' n='+str(params['n'])+' k='+str(params['k'])
 	def err_between(a,b,attribute):
 
 		def get_group_error(gtrue,gfinal):
@@ -109,7 +112,7 @@ def plot_fixed_group(fname,flag_write=False):
 
 			tau = get_permutation_from_LP(Qtrue,Qfinal)
 
-			return np.linalg.norm(Qtrue-np.dot(Qfinal,np.linalg.inv(tau)),'fro')
+			return np.linalg.norm(Qtrue-np.dot(Qfinal,np.linalg.inv(tau)),'fro')*1.0/np.linalg.norm(Qtrue,'fro')
 
 		if attribute!='gfinal':
 			return np.linalg.norm(a-b)/np.linalg.norm(a)
@@ -127,14 +130,17 @@ def plot_fixed_group(fname,flag_write=False):
 				temp = [err_between(params[attributes[attribute]['true_name']],x[t][attribute],attribute) for x in log]
 			elif attribute=='gfinal':
 				temp = [err_between(glog[idx]['gtrue'],x[t][attribute],attribute) for idx,x in enumerate(log)]
-			else
-				return
+			else:
+				return NotImplementedError
 			error[attribute][t] = np.mean(temp)
 			error_std[attribute][t] = np.std(temp)
 
 	for attribute in attributes:
-		plot_error_vs_time(error[attribute],params['estimation_indices'],error_std[attribute],flag_write)
+		plot_error_vs_time(error[attribute],params['estimation_indices'],error_std[attribute],get_title(attribute,params),flag_write)
 
 if __name__ == '__main__':
 	assert len(os.listdir('./output/pickles/')) is not None
-	plot_fixed_group('./output/pickles/'+os.listdir('./output/pickles/')[1],flag_write=True)
+	for fname in glob.glob('./output/pickles/*.pkl'):
+		plot_fixed_group(fname,flag_write=True)
+
+	# https://docs.python.org/3/howto/argparse.html

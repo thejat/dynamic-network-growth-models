@@ -3,7 +3,7 @@ import networkx as nx
 import numpy as np
 from graph_generators import generate_fixed_group
 from graph_estimators import estimate_lazy, estimate_bernoulli
-import time, pickle, os, math
+import time, pickle, os, math, argparse
 from multiprocessing import Pool
 
 #helper functions
@@ -52,33 +52,51 @@ def monte_carlo(params):
 	log = estimate_multiple_times(params,GT)
 	print("\t   Run funish time:", time.time()-params['start_time'])
 
-
-
 	return [log,glog]
 
 
 if __name__=='__main__':
 
 	#common parameters
-	params = {}
-	GTs = []
-	logs = []
+	params 	= {}
+	GTs 	= []
+	logs 	= []
 
 	params['dynamic'] = 'bernoulli'
-	# params['dynamic'] = 'lazy'
-	params['n_mcruns'] 		= 12 # number of monte carlo runs potentially in parallel [12 cores]
-	params['total_time'] 	= 4 # power of 2, number of additional graph snapshots
+	params['n'] 			= 500 # size of the graph
+	params['Mutrue'] 		= np.array([[.5,.5],[.2,.6]])# [bernoulli]
+	params['Wtrue'] 		= np.array([[.8,.2],[.2,.8]])
+	params['k'] 			= params['Wtrue'].shape[0] # number of communities
+	params['total_time'] 	= 32 # power of 2, number of additional graph snapshots
+
+	parser = argparse.ArgumentParser()
+	parser.add_argument("--dynamic", help="dynamic is either bernoulli (default) or lazy")
+	parser.add_argument("--n", help="number of nodes (default 500)", type=int)
+	parser.add_argument("--k", help="number of communities (default 2)", type=int)
+	parser.add_argument("--t", help="number of additional time snaps (default 32)", type=int)
+	args = parser.parse_args()
+
+	if args.dynamic in ['bernoulli','lazy']:
+		print(args.dynamic)
+		params['dynamic'] = args.dynamic
+	if args.n >= 32:
+		print(args.n)
+		params['n'] = args.n
+	if args.k in [2,4]:
+		print(args.k)
+		if args.k == 4:
+			params['k'] = args.k
+			params['Mutrue'] 		= np.array([[.5,.5,.5,.5],[.2,.6,.2,.6],[.2,.5,.5,.5],[.2,.6,.2,.6]])# [bernoulli]
+			params['Wtrue'] 		= np.array([[.8,.2,.1,.1],[.2,.8,.2,.2],[.1,.2,.8,.2],[.1,.2,.2,.8]])
+	if args.t in [2,4,8,16,32,64,128]:
+		params['total_time'] = args.t
+
+	params['nprocesses'] 	= 10
+	params['n_mcruns'] 		= params['nprocesses'] # number of monte carlo runs potentially in parallel [12 cores]
 	params['estimation_indices'] = [int(math.pow(2,i)) for i in range(1,int(math.log2(params['total_time']))+1)]
 	params['xitrue'] 		= .2 # [lazy]
-	# params['Mutrue'] 		= np.array([[.5,.5],[.2,.6]])# [bernoulli]
-	# params['Wtrue'] 		= np.array([[.8,.2],[.2,.8]])
-	params['Mutrue'] 		= np.array([[.5,.5,.5,.5],[.2,.6,.2,.6],[.2,.5,.5,.5],[.2,.6,.2,.6]])# [bernoulli]
-	params['Wtrue'] 		= np.array([[.8,.2,.1,.1],[.2,.8,.2,.2],[.1,.2,.8,.2],[.1,.2,.2,.8]])
-	params['k'] 			= params['Wtrue'].shape[0] # number of communities
-	params['n'] 			= 100 # size of the graph
 	params['ngridpoints']	= 21 # grid search parameter
 	params['start_time'] 	= time.time()
-	params['nprocesses'] 	= 12
 	params['unify_method']  = 'lp' # 'sets' # 
 	params['debug'] 		= False
 	assert min(params['estimation_indices']) > 1

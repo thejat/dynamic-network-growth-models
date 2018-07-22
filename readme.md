@@ -1,6 +1,6 @@
 ### Code for the paper "Block-Structure Based Time-Series Models For Graph Sequences" (2017)
 
-This codebase is for algorithms proposed in the aforementioned [paper](https://arxiv.org/abs/1804.08796). It consists of the following python scripts:
+This codebase is for algorithms proposed in the aforementioned [paper](https://arxiv.org/abs/1804.08796). It consists of the following python3 scripts:
 
   * graph_generators.py : has the synthetic/real instance generators
   * graph_estimators.py : has the proposed algorithms
@@ -11,6 +11,6 @@ The easiest way to get started is to look at experiments.py and go from there.
 
 ##### Dependencies
 
-These are: numpy, networkx, [graph-tool](https://graph-tool.skewed.de/)
+The prominent are: numpy, networkx, [graph-tool](https://graph-tool.skewed.de/), pulp, matplotlib. 
 
 Please make a pull request if you spot bugs or have suggestions!

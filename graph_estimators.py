@@ -198,32 +198,32 @@ def estimate_mu_and_w(params,GT,gfinal,w_hats):
 
 	def estimate_mu_and_w_given_r_s(w_hats, r, s, gfinal,GT, ngridpoints=21,debug=False):
 
-		def scoring(muvar, wvar, w_hats,r,s,gfinal, GT,t):
-			return np.power((np.power(1- muvar*(1+wvar),(t-1))*wvar \
-				+ wvar*(1-np.power(1-muvar*(1+wvar),(t-1)))/(1+wvar) \
-				- w_hats[t][r-1,s-1]),2)
+		def scoring(muvar, wvar, w_hats,r,s, GT):
+			total = 0
+			# print('t',t,' GT length is ',len(GT))
+			for t in range(len(GT)+1):
+				# print('t',t,' GT length is ',len(GT))
+				total += np.power((np.power(1- muvar*(1+wvar),t)*wvar*wvar + wvar)/(1+wvar) - w_hats[t][r-1,s-1],2)
+			return total
 
 		grid_pts = np.linspace(0, 1, ngridpoints)
 		muopt_array = []
 		wopt_array = []
 		score_log = np.zeros((len(grid_pts),len(grid_pts)))
-		for t in range(1, len(GT)):
-			current_min = 1e8 #Potential bug
-			muopt,wopt = grid_pts[0], grid_pts[0]
-			for i,muvar in enumerate(grid_pts):
-				for j,wvar in enumerate(grid_pts):
-					candidate_score = scoring(muvar, wvar,w_hats,r,s,gfinal,GT,t)
-					score_log[i,j] = candidate_score
-					if np.isnan(candidate_score):
-						continue
-					if candidate_score <= current_min:
-						muopt = muvar
-						wopt = wvar
-						current_min = candidate_score
-			muopt_array.append(muopt)
-			wopt_array.append(wopt)
+		current_min = 1e8 #Potential bug
+		muopt,wopt = grid_pts[0], grid_pts[0]
+		for i,muvar in enumerate(grid_pts):
+			for j,wvar in enumerate(grid_pts):
+				candidate_score = scoring(muvar, wvar,w_hats,r,s,GT)
+				score_log[i,j] = candidate_score
+				if np.isnan(candidate_score):
+					continue
+				if candidate_score <= current_min:
+					muopt = muvar
+					wopt = wvar
+					current_min = candidate_score
 
-		return np.mean(muopt_array),np.mean(wopt_array)
+		return muopt,wopt
 
 
 	#Estimate wfinal and mufinal
@@ -305,16 +305,18 @@ def estimate_xi_and_w(params,GT,gfinal,w_hats):
 
 	return wfinal,xifinal
 
-#Proposed Estimator for the Fixed Group Lazy Model 
-def estimate_lazy(params,GT,glog=None):
 
-	gfinal,ghats = get_communities_and_unify(params,GT)
+def get_communities_and_unify_debug_wrapper(params,GT,glog=None):
 
+	# gfinal,ghats = get_communities_and_unify(params,GT) #ORIGINAL
 
+	print('PASSING GTRUE **************************************** DEBUG')
+	gfinal = glog['gtrue']
+	ghats= {}
 
 	########## debug
-	debug=1
-	if debug:
+	compare=0
+	if compare:
 		print('Cross check the communities returned by sets and LP')
 		params['unify_method'] 	= 'lp'
 		gfinalLP,ghatsLP = get_communities_and_unify(params,GT)
@@ -328,13 +330,14 @@ def estimate_lazy(params,GT,glog=None):
 		
 		print("gfinal of sets and true differ: ",get_group_error2(glog['gtrue'],gfinal)," for t=",len(GT))
 		print("gfinal of   lp and true differ: ",get_group_error2(glog['gtrue'],gfinalLP)," for t=",len(GT))
-
-		print('PASSING GTRUE **************************************** DEBUG')
-		gfinal = glog['gtrue']
 	########## debug
 
+	return gfinal,ghats	
 
+#Proposed Estimator for the Fixed Group Lazy Model 
+def estimate_lazy(params,GT,glog=None):
 
+	gfinal,ghats = get_communities_and_unify_debug_wrapper(params,GT,glog)
 	if params['only_unify'] is True:
 		return {'gfinal':gfinal,'ghats':ghats}
 	w_hats = get_w_hats_at_each_timeindex(params,GT,gfinal)
@@ -344,33 +347,7 @@ def estimate_lazy(params,GT,glog=None):
 #Proposed Estimator for the Fixed Group Bernoulli Model
 def estimate_bernoulli(params,GT,glog=None):
 
-	gfinal,ghats = get_communities_and_unify(params,GT)
-	
-
-
-
-	########## debug
-	debug=1
-	if debug:
-		print('Cross check the communities returned by sets and LP')
-		params['unify_method'] 	= 'lp'
-		gfinalLP,ghatsLP = get_communities_and_unify(params,GT)
-		def get_group_error2(gtrue,gfinal):
-			a,b = [0]*len(gtrue),[0]*len(gtrue)
-			for i in gtrue:
-				# print(i)
-				a[i-1],b[i-1] = gtrue[i], gfinal[i]
-			# return 1-metrics.adjusted_rand_score(a,b)
-			return 1-metrics.adjusted_mutual_info_score(a,b)
-		
-		print("gfinal of sets and true differ: ",get_group_error2(glog['gtrue'],gfinal)," for t=",len(GT))
-		print("gfinal of   lp and true differ: ",get_group_error2(glog['gtrue'],gfinalLP)," for t=",len(GT))
-
-		print('PASSING GTRUE **************************************** DEBUG')
-		gfinal = glog['gtrue']
-	########## debug
-
-	
+	gfinal,ghats = get_communities_and_unify_debug_wrapper(params,GT,glog)
 
 	if params['only_unify'] is True:
 		return {'gfinal':gfinal,'ghats':ghats}

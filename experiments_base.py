@@ -41,7 +41,7 @@ def graph_stats_fixed_group(params,GT):
 	gtrue = {x[0]:x[1]['group'][0] for x in GT[0].nodes(data=True)} #only works for fixed group
 	community_sizes = Counter([gtrue[i] for i in gtrue])
 
-	return {'gtrue':gtrue, 'nodecounts': nodecounts, 'edgecounts': edgecounts}
+	return {'gtrue':gtrue, 'nodecounts': nodecounts, 'edgecounts': edgecounts, 'community_sizes': community_sizes}
 
 def monte_carlo(params):
 
@@ -78,7 +78,7 @@ def get_params():
 	params['total_time'] 	= 32 # power of 2, number of additional graph snapshots
 	params['nprocesses'] 	= 10
 	params['n_mcruns'] 		= 2*params['nprocesses'] # number of monte carlo runs potentially in parallel [12 cores]
-	params['estimation_indices'] = [int(math.pow(2,i)) for i in range(1,int(math.log2(params['total_time']))+1)]
+	params['estimation_indices'] = [int(math.pow(2,i))+1 for i in range(1,int(math.log2(params['total_time']))+1)]
 	assert min(params['estimation_indices']) > 1
 	params['xitrue'] 		= .2 # [lazy]
 	params['ngridpoints']	= 21 # grid search parameter

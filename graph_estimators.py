@@ -4,6 +4,8 @@ import time, pprint, copy
 import networkx as nx
 from graph_tool import Graph, inference
 import pulp #tbd: gurobipy/cplex
+from sklearn.cluster import spectral_clustering
+from sklearn import metrics
 
 def get_permutation_from_LP(Q1,Qt):
 
@@ -85,22 +87,19 @@ def unify_communities_LP(ghats,k):
 	return gfinal#, taus, Qs
 
 def unify_communities_sets(ghats,k):
-	kappa = 1
+
+	Qs = {}
+	QQtotal = np.zeros((len(ghats[0]),len(ghats[0])))
+	for idx in range(len(ghats)):
+		Qs[idx] = np.zeros((len(ghats[idx]),k))
+		for i,x in enumerate(ghats[idx]):
+			Qs[idx][i,ghats[idx][x]-1] = 1
+		QQtotal += np.dot(Qs[idx],Qs[idx].transpose())
+
+	spout = spectral_clustering(QQtotal,n_clusters=k)
 	gfinal = {}
-	countij = {}
-	for i in ghats[0].keys():
-		for j in range(1,i):
-			countij[(i,j)] = 0
-			for t in range(0,len(ghats)):
-				if ghats[t][i]==ghats[t][j]:
-					countij[(i,j)] += 1
-			if countij[(i,j)] > len(ghats)*0.5:#BUG
-				if gfinal.get(j,None) is not None and gfinal.get(i,None) is None:
-					gfinal[i] = gfinal[j]
-				if gfinal.get(i,None) is None and gfinal.get(j,None) is None:
-					gfinal[i] = kappa
-					gfinal[j] = kappa
-					kappa += 1
+	for i in ghats[0]:
+		gfinal[i] = spout[i-1]
 	return gfinal
 
 def get_communities_single_graph(G,k):
@@ -144,7 +143,7 @@ def get_communities_and_unify(params,GT):
 			print('\t\t truth:',{x[0]:x[1]['group'][0] for x  in GT[t].nodes(data=True)})
 
 	print('\t\tEstimating gfinal end: ',time.time()-params['start_time'])
-	return gfinal
+	return gfinal,ghats
 
 def get_w_hats_at_each_timeindex(params,GT,gfinal):
 	#Estimate w_hat_t_r_s for all t, r, and s in the sequence
@@ -307,17 +306,74 @@ def estimate_xi_and_w(params,GT,gfinal,w_hats):
 	return wfinal,xifinal
 
 #Proposed Estimator for the Fixed Group Lazy Model 
-def estimate_lazy(params,GT):
+def estimate_lazy(params,GT,glog=None):
 
-	gfinal = get_communities_and_unify(params,GT)
+	gfinal,ghats = get_communities_and_unify(params,GT)
+
+
+
+	########## debug
+	debug=1
+	if debug:
+		print('Cross check the communities returned by sets and LP')
+		params['unify_method'] 	= 'lp'
+		gfinalLP,ghatsLP = get_communities_and_unify(params,GT)
+		def get_group_error2(gtrue,gfinal):
+			a,b = [0]*len(gtrue),[0]*len(gtrue)
+			for i in gtrue:
+				# print(i)
+				a[i-1],b[i-1] = gtrue[i], gfinal[i]
+			# return 1-metrics.adjusted_rand_score(a,b)
+			return 1-metrics.adjusted_mutual_info_score(a,b)
+		
+		print("gfinal of sets and true differ: ",get_group_error2(glog['gtrue'],gfinal)," for t=",len(GT))
+		print("gfinal of   lp and true differ: ",get_group_error2(glog['gtrue'],gfinalLP)," for t=",len(GT))
+
+		print('PASSING GTRUE **************************************** DEBUG')
+		gfinal = glog['gtrue']
+	########## debug
+
+
+
+	if params['only_unify'] is True:
+		return {'gfinal':gfinal,'ghats':ghats}
 	w_hats = get_w_hats_at_each_timeindex(params,GT,gfinal)
 	wfinal,xifinal = estimate_xi_and_w(params,GT,gfinal,w_hats)
-	return {'gfinal':gfinal,'wfinal':wfinal,'xifinal':xifinal}
+	return {'gfinal':gfinal,'ghats':ghats,'wfinal':wfinal,'xifinal':xifinal}
 
 #Proposed Estimator for the Fixed Group Bernoulli Model
-def estimate_bernoulli(params,GT):
+def estimate_bernoulli(params,GT,glog=None):
 
-	gfinal = get_communities_and_unify(params,GT)
+	gfinal,ghats = get_communities_and_unify(params,GT)
+	
+
+
+
+	########## debug
+	debug=1
+	if debug:
+		print('Cross check the communities returned by sets and LP')
+		params['unify_method'] 	= 'lp'
+		gfinalLP,ghatsLP = get_communities_and_unify(params,GT)
+		def get_group_error2(gtrue,gfinal):
+			a,b = [0]*len(gtrue),[0]*len(gtrue)
+			for i in gtrue:
+				# print(i)
+				a[i-1],b[i-1] = gtrue[i], gfinal[i]
+			# return 1-metrics.adjusted_rand_score(a,b)
+			return 1-metrics.adjusted_mutual_info_score(a,b)
+		
+		print("gfinal of sets and true differ: ",get_group_error2(glog['gtrue'],gfinal)," for t=",len(GT))
+		print("gfinal of   lp and true differ: ",get_group_error2(glog['gtrue'],gfinalLP)," for t=",len(GT))
+
+		print('PASSING GTRUE **************************************** DEBUG')
+		gfinal = glog['gtrue']
+	########## debug
+
+	
+
+	if params['only_unify'] is True:
+		return {'gfinal':gfinal,'ghats':ghats}
 	w_hats = get_w_hats_at_each_timeindex(params,GT,gfinal)
 	wfinal,mufinal = estimate_mu_and_w(params,GT,gfinal,w_hats)
-	return {'gfinal':gfinal,'wfinal':wfinal,'mufinal':mufinal}
+	return {'gfinal':gfinal,'ghats':ghats,'wfinal':wfinal,'mufinal':mufinal}

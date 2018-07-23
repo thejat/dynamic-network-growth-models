@@ -3,6 +3,7 @@ import pickle, pprint, os, time, glob
 import seaborn as sns
 from matplotlib import pyplot as plt
 import pulp
+from sklearn import metrics
 
 #Style
 plt.style.use('fivethirtyeight')
@@ -59,8 +60,6 @@ def get_permutation_from_LP(Q1,Qt):
 	# print "\t Obj =", pulp.value(lp_prob.objective)
 	return np.array(tau).reshape((Q1.shape[1],Q1.shape[1]))
 
-
-
 def plot_error_vs_time(error,estimation_indices,error_std=None,attribute='',flag_write=False):
 	error = np.array([error[x] for x in error])
 	error_std = np.array([error_std[x] for x in error_std])
@@ -90,35 +89,55 @@ def plot_fixed_group(fname,flag_write=False):
 		attributes['xifinal'] = {'true_name':'xitrue'}
 	else:
 		return NotImplementedError
+	if params['only_unify'] is True:
+		attributes = {'gfinal':{'true_name':'gtrue'}}
 	
 	def get_title(attribute,params):
-		return attribute+' '+params['dynamic']+' n='+str(params['n'])+' k='+str(params['k'])
-	def err_between(a,b,attribute):
+		return attribute+' '+params['dynamic']+' n='+str(params['n'])+' k='+str(params['k'])+' '+params['unify_method']
 
-		def get_group_error(gtrue,gfinal):
-			# if debug:
-			# 	print gtrue
-			# 	print gfinal
+	def get_tau(gtrue,gfinal):
+		temp_nodes = gtrue.keys()
+		k = max(gtrue.values())
 
-			temp_nodes = gtrue.keys()
-			k = max(gtrue.values())
+		#Find permutation matrices tau
+		Qtrue = np.zeros((len(temp_nodes),k))
+		Qfinal = np.zeros((len(temp_nodes),k))
+		for i in temp_nodes: #every node index from 1 to n
+			Qtrue[i-1,gtrue[i]-1] = 1
+			Qfinal[i-1,gfinal[i]-1] = 1
 
-			#Find permutation matrices tau
-			Qtrue = np.zeros((len(temp_nodes),k))
-			Qfinal = np.zeros((len(temp_nodes),k))
-			for i in temp_nodes: #every node index from 1 to n
-				Qtrue[i-1,gtrue[i]-1] = 1
-				Qfinal[i-1,gfinal[i]-1] = 1
+		tau = get_permutation_from_LP(Qtrue,Qfinal)
 
-			tau = get_permutation_from_LP(Qtrue,Qfinal)
+		return {'tau':tau, 'Qtrue':Qtrue, 'Qfinal':Qfinal}
 
-			return np.linalg.norm(Qtrue-np.dot(Qfinal,np.linalg.inv(tau)),'fro')*1.0/np.linalg.norm(Qtrue,'fro')
+	def error_between_groups(gtrue,gfinal,tau_info=None):
 
-		if attribute!='gfinal':
-			return np.linalg.norm(a-b)/np.linalg.norm(a)
-		elif attribute=='gfinal':
-			return get_group_error(a,b)
+		# #First type
+		# assert tau_info is not None
+		# tau 	= tau_info['tau']
+		# Qtrue 	= tau_info['Qtrue']
+		# Qfinal 	= tau_info['Qfinal']
+		# return np.linalg.norm(Qtrue-np.dot(Qfinal,np.linalg.inv(tau)),'fro')*1.0/np.linalg.norm(Qtrue,'fro')
 
+		#Second and third types
+		a,b = [0]*len(gtrue),[0]*len(gtrue)
+		for i in gtrue:
+			a[i-1],b[i-1] = gtrue[i], gfinal[i]
+		# return 1-metrics.adjusted_rand_score(a,b)
+		return 1-metrics.adjusted_mutual_info_score(a,b)
+
+	def error_between_matrices(a,b,attribute,tau_info):
+		tau 	= tau_info['tau']
+		print(attribute)
+		pprint.pprint(tau)
+		pprint.pprint(a)
+		pprint.pprint(b)
+		bnew = b #np.dot(np.dot(tau,b),tau) #this has some error tbd, is not needed with W and Mu are symmetric
+		# pprint.pprint(bnew)
+		return np.linalg.norm(a-bnew)/np.linalg.norm(a)
+
+	def error_between_scalars(a,b):
+		return np.abs(a-b)*1.0/a
 
 	error = {}
 	error_std = {}
@@ -126,21 +145,63 @@ def plot_fixed_group(fname,flag_write=False):
 		error[attribute] = {}
 		error_std[attribute] = {}
 		for t in params['estimation_indices']:
-			if attribute!='gfinal':
-				temp = [err_between(params[attributes[attribute]['true_name']],x[t][attribute],attribute) for x in log]
-			elif attribute=='gfinal':
-				temp = [err_between(glog[idx]['gtrue'],x[t][attribute],attribute) for idx,x in enumerate(log)]
-			else:
-				return NotImplementedError
+			temp = []
+			for idx,x in enumerate(log):
+				tau_info = get_tau(glog[idx]['gtrue'],x[t]['gfinal'])
+				if attribute=='xifinal':
+					temp.append(error_between_scalars(params[attributes[attribute]['true_name']],x[t][attribute]))
+				elif attribute in ['wfinal','mufinal']:
+					temp.append(error_between_matrices(params[attributes[attribute]['true_name']],x[t][attribute],attribute,tau_info))
+				elif attribute=='gfinal':
+					temp.append(error_between_groups(glog[idx]['gtrue'],x[t][attribute],tau_info))
+				else:
+					return NotImplementedError
 			error[attribute][t] = np.mean(temp)
 			error_std[attribute][t] = np.std(temp)
 
 	for attribute in attributes:
 		plot_error_vs_time(error[attribute],params['estimation_indices'],error_std[attribute],get_title(attribute,params),flag_write)
 
+# def plot_individual(fname,flag_write=False):
+
+# 	rawdata = pickle.load(open(fname,'rb'))
+# 	log, glog, params = rawdata['log'], rawdata['glog'], rawdata['params']
+
+# 	attributes = {'gfinal':{'true_name':'gtrue'},'wfinal':{'true_name':'Wtrue'}}
+# 	if params['dynamic']=='bernoulli':
+# 		attributes['mufinal'] = {'true_name':'Mutrue'}
+# 	elif params['dynamic']=='lazy':
+# 		attributes['xifinal'] = {'true_name':'xitrue'}
+# 	else:
+# 		return NotImplementedError
+# 	if params['only_unify'] is True:
+# 		attributes = {'gfinal':{'true_name':'gtrue'}}
+
+
+# 	error = {}
+# 	error_std = {}
+# 	attribute = 'wfinal'
+# 	for t in params['estimation_indices']:
+# 		temp = []
+# 		for idx,x in enumerate(log):
+# 			tau_info = get_tau(glog[idx]['gtrue'],x[t]['gfinal'])
+# 			if attribute=='xifinal':
+# 				temp.append(error_between_scalars(params[attributes[attribute]['true_name']],x[t][attribute]))
+# 			elif attribute in ['wfinal','mufinal']:
+# 				temp.append(error_between_matrices(params[attributes[attribute]['true_name']],x[t][attribute],attribute,tau_info))
+# 			elif attribute=='gfinal':
+# 				temp.append(error_between_groups(glog[idx]['gtrue'],x[t][attribute],tau_info))
+# 			else:
+# 				return NotImplementedError
+# 		error[[t] = np.mean(temp)
+# 		error_std[t] = np.std(temp)
+
+# 	plot_error_vs_time(error[attribute],params['estimation_indices'],error_std[attribute],get_title(attribute,params),flag_write)
+
+
 if __name__ == '__main__':
 	assert len(os.listdir('./output/pickles/')) is not None
-	for fname in glob.glob('./output/pickles/*.pkl'):
+	for fname in glob.glob('./output/pickles/*pkl'):
 		plot_fixed_group(fname,flag_write=True)
-
-	# https://docs.python.org/3/howto/argparse.html
+	# for fname in glob.glob('./output/pickles/*unif'):
+		# plot_fixed_group(fname,flag_write=True)

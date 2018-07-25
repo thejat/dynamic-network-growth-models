@@ -83,8 +83,9 @@ def get_params():
 	params['xitrue'] 		= .2 # [lazy]
 	params['ngridpoints']	= 21 # grid search parameter
 	params['start_time'] 	= time.time()
-	params['unify_method']  = 'sets' # 'lp' # 
+	params['unify_method']  = 'sets' # 'lp' # 'avg-spectral'
 	params['only_unify'] 	= False
+	params['compare_unify'] = False
 	params['debug'] 		= False
 	
 	return params

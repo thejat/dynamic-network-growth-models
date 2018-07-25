@@ -203,7 +203,5 @@ def plot_fixed_group(fname,flag_write=False):
 
 if __name__ == '__main__':
 	assert len(os.listdir('./output/pickles/')) is not None
-	for fname in glob.glob('./output/pickles/*pkl'):
+	for fname in glob.glob('./output/pickles/*pkl*'):
 		plot_fixed_group(fname,flag_write=True)
-	# for fname in glob.glob('./output/pickles/*unif'):
-		# plot_fixed_group(fname,flag_write=True)

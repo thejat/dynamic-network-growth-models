@@ -1,5 +1,6 @@
 #graph parameter estimation
 import numpy as np
+import scipy as sp
 import time, pprint, copy
 import networkx as nx
 from graph_tool import Graph, inference
@@ -96,33 +97,42 @@ def unify_communities_sets(ghats,k):
 			Qs[idx][i,ghats[idx][x]-1] = 1
 		QQtotal += np.dot(Qs[idx],Qs[idx].transpose())
 
-	spout = spectral_clustering(QQtotal,n_clusters=k)
+	spout = spectral_clustering(QQtotal,n_clusters=k) + 1
 	gfinal = {}
 	for i in ghats[0]:
 		gfinal[i] = spout[i-1]
 	return gfinal
 
 def get_communities_single_graph(G,k):
-	def networkx2graph_tool(G):
-		g = Graph()
-		gv = {}
-		ge = {}
-		for n in G.nodes():
-			gv[n] = g.add_vertex()
-		for e in G.edges():
-			ge[e] = g.add_edge(gv[e[0]],gv[e[1]])#connects two ends of the edges
-		return [g,gv,ge]
-	gtg,gtgv,gtge = networkx2graph_tool(G)
-	gttemp = inference.minimize_blockmodel_dl(gtg,B_min=k,B_max=k)
-	labels= np.array(gttemp.b.get_array())
-	partition = {}
-	for e,x in enumerate(gtgv):#Why for e and x?
-		partition[x] = int(labels[e])+1 #Gives the # of nodes in each community?
-	return partition
+
+	####### METHOD SPECTRAL
+	spout = spectral_clustering(nx.adjacency_matrix(G),n_clusters=k) + 1
+	gfinal = {}
+	for i in G.nodes():
+		gfinal[i] = spout[i-1]
+	return gfinal
+
+	# ####### METHOD BISECTION HEURISTIC https://arxiv.org/abs/1310.4378
+	# def networkx2graph_tool(G):
+	# 	g = Graph()
+	# 	gv = {}
+	# 	ge = {}
+	# 	for n in G.nodes():
+	# 		gv[n] = g.add_vertex()
+	# 	for e in G.edges():
+	# 		ge[e] = g.add_edge(gv[e[0]],gv[e[1]])#connects two ends of the edges
+	# 	return [g,gv,ge]
+	# gtg,gtgv,gtge = networkx2graph_tool(G)
+	# gttemp = inference.minimize_blockmodel_dl(gtg,B_min=k,B_max=k)
+	# labels= np.array(gttemp.b.get_array())
+	# partition = {}
+	# for e,x in enumerate(gtgv):#Why for e and x?
+	# 	partition[x] = int(labels[e])+1 #Gives the # of nodes in each community?
+	# return partition
 
 def get_communities_and_unify(params,GT):
 
-	print('\t\tEstimating gfinal start: ',time.time()-params['start_time'])
+	# print('\t\tEstimating gfinal start: ',time.time()-params['start_time'])
 	#Estimate communities for individual snapshots
 	ghats = {}
 	for t,G in enumerate(GT):
@@ -142,8 +152,28 @@ def get_communities_and_unify(params,GT):
 			print('\t\t est:',ghats[t])
 			print('\t\t truth:',{x[0]:x[1]['group'][0] for x  in GT[t].nodes(data=True)})
 
-	print('\t\tEstimating gfinal end: ',time.time()-params['start_time'])
+	# print('\t\tEstimating gfinal end: ',time.time()-params['start_time'])
 	return gfinal,ghats
+
+
+def unify_by_averaging_directly(params,GT):
+	#This is the technique by Han Xu and Airoldi 2015 ICML
+
+	adj_matrix_summed = sp.sparse.csr_matrix(np.zeros((len(GT[0].nodes),len(GT[0].nodes))),dtype=int)
+	for G in GT:
+		adj_matrix_summed += nx.adjacency_matrix(G)
+
+	######### METHOD 1
+	spout = spectral_clustering(adj_matrix_summed,n_clusters=params['k']) + 1
+	gfinal = {}
+	for i in GT[0].nodes():
+		gfinal[i] = spout[i-1]
+	return gfinal,{}
+
+	# ######### METHOD 2
+	# # TBD
+	# gfinal = get_communities_single_graph(G,params['k'])
+	# return gfinal,{}
 
 def get_w_hats_at_each_timeindex(params,GT,gfinal):
 	#Estimate w_hat_t_r_s for all t, r, and s in the sequence
@@ -328,18 +358,37 @@ def estimate_xi_and_w(params,GT,gfinal,w_hats):
 
 def get_communities_and_unify_debug_wrapper(params,GT,glog=None):
 
-	gfinal,ghats = get_communities_and_unify(params,GT) #ORIGINAL
-
-	# print('PASSING GTRUE **************************************** DEBUG')
-	# gfinal = glog['gtrue']
-	# ghats= {}
 
 	########## debug
-	compare=1
-	if compare:
-		print('Cross check the communities returned by sets and LP')
-		params['unify_method'] 	= 'lp'
-		gfinalLP,ghatsLP = get_communities_and_unify(params,GT)
+	# print('PASSING GTRUE **************************************** DEBUG')
+	# gfinal = glog['gtrue']
+	# gfinal_menecessary{}
+	########## debug
+
+
+	gfinal_metadata = {}
+	gfinal,ghats = get_communities_and_unify(params,GT) #necessary
+	gfinal_metadata[params['unify_method']] = {'gfinal':gfinal,'ghats':ghats}
+
+	if params['compare_unify']: #do the comparisons across different methods
+		# print('Cross check the communities returned by sets (done above) and LP and Avg-Spectral')
+		
+		comparisons0 = set(['sets','lp','avg-spectral'])
+		comparisons = comparisons0.difference([params['unify_method']])
+
+		for method in comparisons:
+			if method=='lp':
+				params['unify_method'] 	= 'lp'
+				gfinalLP,ghatsLP = get_communities_and_unify(params,GT)
+				gfinal_metadata['lp'] = {'gfinal':gfinalLP,'ghats':ghatsLP}
+			elif method=='sets':
+				params['unify_method'] 	= 'sets'
+				gfinalSets,ghatsSets = get_communities_and_unify(params,GT)
+				gfinal_metadata['sets'] = {'gfinal':gfinalSets,'ghats':ghatsSets}
+			elif method=='avg-spectral':
+				gfinalSP,ghatsSP = unify_by_averaging_directly(params,GT)
+				gfinal_metadata['avg-spectral'] = {'gfinal':gfinalSP,'ghats':ghatsSP}
+
 		def get_group_error2(gtrue,gfinal):
 			a,b = [0]*len(gtrue),[0]*len(gtrue)
 			for i in gtrue:
@@ -347,30 +396,31 @@ def get_communities_and_unify_debug_wrapper(params,GT,glog=None):
 				a[i-1],b[i-1] = gtrue[i], gfinal[i]
 			# return 1-metrics.adjusted_rand_score(a,b)
 			return 1-metrics.adjusted_mutual_info_score(a,b)
-		
-		print("gfinal of sets and true differ: ",get_group_error2(glog['gtrue'],gfinal)," for t=",len(GT))
-		print("gfinal of   lp and true differ: ",get_group_error2(glog['gtrue'],gfinalLP)," for t=",len(GT))
-	########## debug
 
-	return gfinal,ghats	
+		for method in comparisons0:
+			print("gfinal of ",method,"\t and true differ: ",get_group_error2(glog['gtrue'],gfinal_metadata[method]['gfinal'])," for t=",len(GT))
+
+	return gfinal,gfinal_metadata
 
 #Proposed Estimator for the Fixed Group Lazy Model 
 def estimate_lazy(params,GT,glog=None):
 
-	gfinal,ghats = get_communities_and_unify_debug_wrapper(params,GT,glog)
+	gfinal,gfinal_metadata = get_communities_and_unify_debug_wrapper(params,GT,glog)
 	if params['only_unify'] is True:
-		return {'gfinal':gfinal,'ghats':ghats}
+		return {'gfinal':gfinal,'gfinal_metadata':gfinal_metadata}
+
 	w_hats = get_w_hats_at_each_timeindex(params,GT,gfinal)
 	wfinal,xifinal = estimate_xi_and_w(params,GT,gfinal,w_hats)
-	return {'gfinal':gfinal,'ghats':ghats,'wfinal':wfinal,'xifinal':xifinal}
+	return {'gfinal':gfinal,'gfinal_metadata':gfinal_metadata,'wfinal':wfinal,'xifinal':xifinal}
 
 #Proposed Estimator for the Fixed Group Bernoulli Model
 def estimate_bernoulli(params,GT,glog=None):
 
-	gfinal,ghats = get_communities_and_unify_debug_wrapper(params,GT,glog)
+	gfinal,gfinal_metadata = get_communities_and_unify_debug_wrapper(params,GT,glog)
 
 	if params['only_unify'] is True:
-		return {'gfinal':gfinal,'ghats':ghats}
+		return {'gfinal':gfinal,'gfinal_metadata':gfinal_metadata}
+
 	w_hats = get_w_hats_at_each_timeindex(params,GT,gfinal)
 	wfinal,mufinal = estimate_mu_and_w(params,GT,gfinal,w_hats)
-	return {'gfinal':gfinal,'ghats':ghats,'wfinal':wfinal,'mufinal':mufinal}
+	return {'gfinal':gfinal,'gfinal_metadata':gfinal_metadata,'wfinal':wfinal,'mufinal':mufinal}

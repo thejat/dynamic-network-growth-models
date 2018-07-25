@@ -77,7 +77,7 @@ def get_params():
 	params['k'] 			= params['Wtrue'].shape[0] # number of communities
 	params['total_time'] 	= 32 # power of 2, number of additional graph snapshots
 	params['nprocesses'] 	= 10
-	params['n_mcruns'] 		= 2*params['nprocesses'] # number of monte carlo runs potentially in parallel [12 cores]
+	params['n_mcruns'] 		= params['nprocesses'] # number of monte carlo runs potentially in parallel [12 cores]
 	params['estimation_indices'] = [int(math.pow(2,i))+1 for i in range(1,int(math.log2(params['total_time']))+1)]
 	assert min(params['estimation_indices']) > 1
 	params['xitrue'] 		= .2 # [lazy]

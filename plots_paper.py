@@ -132,9 +132,10 @@ def plot_fixed_group(fname,flag_write=False):
 		pprint.pprint(tau)
 		pprint.pprint(a)
 		pprint.pprint(b)
-		bnew = b #np.dot(np.dot(tau,b),tau) #this has some error tbd, is not needed with W and Mu are symmetric
+		# bnew = np.dot(np.dot(tau,b),tau) #this has some error tbd, is not needed with W and Mu are symmetric
 		# pprint.pprint(bnew)
-		return np.linalg.norm(a-bnew)/np.linalg.norm(a)
+		print('np.linalg.norm(a-b): ',np.linalg.norm(a-b),'\t np.linalg.norm(a): ',np.linalg.norm(a))
+		return np.linalg.norm(a-b)/np.linalg.norm(a)
 
 	def error_between_scalars(a,b):
 		return np.abs(a-b)*1.0/a
@@ -145,6 +146,7 @@ def plot_fixed_group(fname,flag_write=False):
 		error[attribute] = {}
 		error_std[attribute] = {}
 		for t in params['estimation_indices']:
+			print('\n\n\n----------------------------\n\nt',t,'\n')
 			temp = []
 			for idx,x in enumerate(log):
 				tau_info = get_tau(glog[idx]['gtrue'],x[t]['gfinal'])

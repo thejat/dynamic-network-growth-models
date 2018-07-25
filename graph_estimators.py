@@ -198,13 +198,32 @@ def estimate_mu_and_w(params,GT,gfinal,w_hats):
 
 	def estimate_mu_and_w_given_r_s(w_hats, r, s, gfinal,GT, ngridpoints=21,debug=False):
 
-		def scoring(muvar, wvar, w_hats,r,s, GT):
+		def scoring_equations(muvar, wvar, w_hats, r, s, GT, gfinal=None):
 			total = 0
 			# print('t',t,' GT length is ',len(GT))
-			for t in range(len(GT)+1):
+			for t in range(len(GT)):
 				# print('t',t,' GT length is ',len(GT))
 				total += np.power((np.power(1- muvar*(1+wvar),t)*wvar*wvar + wvar)/(1+wvar) - w_hats[t][r-1,s-1],2)
 			return total
+
+		def scoring_mle(muvar, wvar, w_hats, r, s, GT, gfinal):
+			#TBD doesn't seem to work correctly
+			total = 0
+			nodes = GT[0].nodes()
+			for i in nodes:
+				for j in nodes:
+					if j > i: 
+						if gfinal[i]==r and gfinal[j]==s:
+							total += np.log(1e-20 + GT[0].has_edge(i,j)*wvar + (1-GT[0].has_edge(i,j))*(1-wvar))
+
+							for t in range(1,len(GT)):
+								total += np.log(1e-20 + (1-GT[t-1].has_edge(i,j))*GT[t].has_edge(i,j)*muvar*wvar) \
+										+np.log(1e-20 + (1-GT[t-1].has_edge(i,j))*(1-GT[t].has_edge(i,j))*(1-muvar*wvar)) \
+										+np.log(1e-20 + GT[t-1].has_edge(i,j)*GT[t].has_edge(i,j)*(1-muvar)) \
+										+np.log(1e-20 + GT[t-1].has_edge(i,j)*(1-GT[t].has_edge(i,j))*muvar)
+
+
+			return -1*total #minimize negative log likelihood
 
 		grid_pts = np.linspace(0, 1, ngridpoints)
 		muopt_array = []
@@ -214,7 +233,8 @@ def estimate_mu_and_w(params,GT,gfinal,w_hats):
 		muopt,wopt = grid_pts[0], grid_pts[0]
 		for i,muvar in enumerate(grid_pts):
 			for j,wvar in enumerate(grid_pts):
-				candidate_score = scoring(muvar, wvar,w_hats,r,s,GT)
+				candidate_score = scoring_mle(muvar, wvar,w_hats,r,s,GT,gfinal)
+				# candidate_score = scoring_equations(muvar, wvar,w_hats,r,s,GT,gfinal)
 				score_log[i,j] = candidate_score
 				if np.isnan(candidate_score):
 					continue
@@ -308,14 +328,14 @@ def estimate_xi_and_w(params,GT,gfinal,w_hats):
 
 def get_communities_and_unify_debug_wrapper(params,GT,glog=None):
 
-	# gfinal,ghats = get_communities_and_unify(params,GT) #ORIGINAL
+	gfinal,ghats = get_communities_and_unify(params,GT) #ORIGINAL
 
-	print('PASSING GTRUE **************************************** DEBUG')
-	gfinal = glog['gtrue']
-	ghats= {}
+	# print('PASSING GTRUE **************************************** DEBUG')
+	# gfinal = glog['gtrue']
+	# ghats= {}
 
 	########## debug
-	compare=0
+	compare=1
 	if compare:
 		print('Cross check the communities returned by sets and LP')
 		params['unify_method'] 	= 'lp'

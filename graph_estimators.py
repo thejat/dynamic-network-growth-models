@@ -147,9 +147,8 @@ def get_communities_and_unify(params,GT):
 
 	#Unify by averaging over adjacency matrices
 	if params['unify_method']=='Spectral-Mean':
-		gfinals,ghats = unify_communities_spectral_mean(params,GT)
-
-	return gfinal,ghats
+		gfinal,ghats = unify_communities_spectral_mean(params,GT)
+		return gfinal,ghats
 
 	#If not doing the above, then unify after getting ghats
 

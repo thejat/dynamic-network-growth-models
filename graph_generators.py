@@ -1,6 +1,7 @@
 import networkx as nx
 import numpy as np
 import time, copy
+from collections import Counter
 
 def generate_initial_graph(n,k,W):
 	#Graph at time zero

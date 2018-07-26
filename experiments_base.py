@@ -8,7 +8,6 @@ import numpy as np
 from graph_generators import generate_fixed_group, add_noise, graph_stats_fixed_group
 from graph_estimators import estimate_lazy, estimate_bernoulli
 import time, pickle, os, math
-from collections import Counter
 
 #helper functions
 def localtime():
@@ -51,7 +50,7 @@ def monte_carlo(params):
 
 def save_data(logs_glogs,params):
 	params['end_time_delta'] 	= time.time() - params['start_time']
-	fname = './output/pickles/log_'+params['dynamic']+'_n'+params['n']+'_k'+params['k']
+	fname = './output/pickles/log_'+params['dynamic']+'_n'+str(params['n'])+'_k'+str(params['k'])
 	pickle.dump({'log':[x for x,y in logs_glogs],'glog':[y for x,y in logs_glogs],'params':params},open(fname+'_'+localtime()+'.pkl','wb'))	
 	print('Experiment end time:', params['end_time_delta'])	
 

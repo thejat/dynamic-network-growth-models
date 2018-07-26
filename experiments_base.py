@@ -65,10 +65,10 @@ def monte_carlo(params):
 
 	#Get graph sequence
 	# print("Generate data: Monte Carlo Run # ",mcrun+1, " of ",params['n_mcruns'],' starting: ',time.time() - params['start_time'])
-	GT = generate_fixed_group(params['dynamic'],params['xitrue'],params['Mutrue'],params['Wtrue'],params['n'],params['k'],params['total_time'],params['start_time'])	
+	GT = generate_fixed_group(params)	
 	glog = graph_stats_fixed_group(params,GT)
 	GTnoisy = GT
-	if params['noisy'] is True:
+	if params['noisy_edges'] is True:
 		GTnoisy = add_noise(GT)
 
 	#Estimate parameters on each of the graphs at the given time indices
@@ -106,6 +106,7 @@ def get_params():
 	params['only_unify'] 	= False
 	params['compare_unify'] = False
 	params['debug'] 		= False
-	params['noisy'] 		= False
-	
+	params['noisy_edges'] 	= False
+	params['spectral_adversarial'] = True
+
 	return params

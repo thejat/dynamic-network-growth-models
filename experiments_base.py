@@ -43,18 +43,37 @@ def graph_stats_fixed_group(params,GT):
 
 	return {'gtrue':gtrue, 'nodecounts': nodecounts, 'edgecounts': edgecounts, 'community_sizes': community_sizes}
 
+def add_noise(GT,noise_type='random',noise_level=None):
+	if noise_level is None:
+		noise_level = 0.8
+	GTnoisy = []
+	if noise_type=='random':
+		for G in GT:
+			Gnew = G.copy()
+			for e in G.edges():
+				if np.random.rand() <= noise_level:
+						Gnew.remove_edge(*e)
+			GTnoisy.append(Gnew)
+	else:
+		GTnoisy = GT #TBD
+
+	return GTnoisy
+
 def monte_carlo(params):
 
 	np.random.seed()
 
 	#Get graph sequence
 	# print("Generate data: Monte Carlo Run # ",mcrun+1, " of ",params['n_mcruns'],' starting: ',time.time() - params['start_time'])
-	GT = generate_fixed_group(params['dynamic'],params['xitrue'],params['Mutrue'],params['Wtrue'],params['n'],params['k'],params['total_time'],params['start_time'])
+	GT = generate_fixed_group(params['dynamic'],params['xitrue'],params['Mutrue'],params['Wtrue'],params['n'],params['k'],params['total_time'],params['start_time'])	
 	glog = graph_stats_fixed_group(params,GT)
+	GTnoisy = GT
+	if params['noisy'] is True:
+		GTnoisy = add_noise(GT)
 
 	#Estimate parameters on each of the graphs at the given time indices
 	# print("Estimate: Monte Carlo Run # ",mcrun+1, " of ",params['n_mcruns'],' starting: ',time.time() - params['start_time'])
-	log = estimate_multiple_times(params,GT,glog)
+	log = estimate_multiple_times(params,GTnoisy,glog)
 	print("\t   Run funish time:", time.time()-params['start_time'])
 
 	return [log,glog]
@@ -73,7 +92,7 @@ def get_params():
 	params['dynamic'] 		= 'bernoulli'
 	params['n'] 			= 100 # size of the graph
 	params['Mutrue'] 		= np.array([[.4,.6],[.6,.4]])# [bernoulli]
-	params['Wtrue'] 		= np.array([[.8,.2],[.2,.8]])
+	params['Wtrue'] 		= np.array([[.4,.2],[.2,.4]])
 	params['k'] 			= params['Wtrue'].shape[0] # number of communities
 	params['total_time'] 	= 32 # power of 2, number of additional graph snapshots
 	params['nprocesses'] 	= 10
@@ -87,5 +106,6 @@ def get_params():
 	params['only_unify'] 	= False
 	params['compare_unify'] = False
 	params['debug'] 		= False
+	params['noisy'] 		= False
 	
 	return params

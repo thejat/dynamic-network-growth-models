@@ -1,6 +1,6 @@
 import networkx as nx
 import numpy as np
-import time
+import time, copy
 
 def generate_initial_graph(n,k,W):
 	#Graph at time zero
@@ -59,6 +59,64 @@ def generate_fixed_group(dynamic,xi,Mu,W,n,k,total_time,log_start_time=time.time
 		GT.append(Gcurrent)
 	print('\tTime taken for graph sequence generation:', time.time() - st)
 	return GT
+
+
+
+
+def generate_fixed_group_adversarial(dynamic,xi,Mu,W,n,k,total_time,log_start_time=time.time()):
+	'''
+	Graph at 0 is the single original graph
+	Graphs at times t-1,...,total_time are the evolved ones
+	'''
+
+	#Create the first graph
+	st = log_start_time
+	# print("\tGenerating GT sequence for the", dynamic, "dynamic")
+	Goriginal = generate_initial_graph(n,k,W)
+
+	Wold = copy.deepcopy(W)
+
+	#Create the subsequent total_time number of graphs indexed from 1 to total_time
+	GT = [Goriginal]
+	for t in range(1,total_time+1): #t = 1,2,...,T
+
+		W = 1-W #Adversarial
+
+		# print('\t\tGraph at snapshot', t, ' time', time.time() - st)
+		Gcurrent = nx.Graph()
+		for node in GT[t-1].nodes(data=True):
+			Gcurrent.add_node(node[0],group=node[1]['group'])
+
+		if dynamic=='bernoulli':
+			for i in Gcurrent.nodes():
+				for j in Gcurrent.nodes():
+					if i < j:
+						if (i, j) in GT[t - 1].edges():
+							if np.random.rand() > Mu[Gcurrent.node[i]['group'] - 1, Gcurrent.node[j]['group'] - 1]:
+								Gcurrent.add_edge(i, j)
+						else:
+							if np.random.rand() <= (W[Gcurrent.node[i]['group'] - 1, Gcurrent.node[j]['group'] - 1])*(Mu[Gcurrent.node[i]['group'] - 1, Gcurrent.node[j]['group'] - 1]):
+								 Gcurrent.add_edge(i, j)
+		elif dynamic=='lazy':
+			for i in Gcurrent.nodes():
+				for j in Gcurrent.nodes():
+					if i < j:
+						if np.random.rand() <= xi:
+							if (i,j) in GT[t-1].edges():
+								Gcurrent.add_edge(i,j)
+						else:
+							if np.random.rand() <= W[Gcurrent.node[i]['group']-1,Gcurrent.node[j]['group']-1]:
+								Gcurrent.add_edge(i,j)
+		else:
+			raise NotImplementedError
+
+		GT.append(Gcurrent)
+	print('\tTime taken for ',dynamic, ' dynamic graph sequence generation:', time.time() - st)
+	return GT
+
+
+
+
 
 
 # def generate_changing_group_MM(minority_pct_ub=0.4, xi=1, W=np.matrix('0.9 0.1; 0.1 0.9'), n=20, k=2, flag_draw=True, total_time=2,debug=False):

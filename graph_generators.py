@@ -18,24 +18,38 @@ def generate_initial_graph(n,k,W):
 
 def generate_minorities(Gcurrent,Gprevious,k,minority_pct_ub,t):
 
-    current_community_sizes = np.zeros(k)
-    for i in Gcurrent.nodes():
-            current_community_sizes[Gcurrent.node[i]['group']-1] += 1
+	print('\n\ncurrent time',t)
 
-    minority_counter = np.zeros(k)
-    nodes = np.random.permutation(Gcurrent.nodes())
-    for i in nodes: #we are changing minorities to minorities as well. design choice.
-        if np.random.rand() < np.random.rand()*minority_pct_ub:
-            temp_old_group = Gcurrent.node[i]['group'][0]
-            # print(temp_old_group,type(temp_old_group))
-            Gcurrent.node[i]['group'] = np.random.choice(list(range(1,temp_old_group))+list(range(temp_old_group+1,k+1)), 1)
-            minority_counter[temp_old_group-1] += 1
-            Gprevious.node[i]['majority'] = 0
-            print('node ', i, ' changed community from ',temp_old_group,' to ',Gcurrent.node[i]['group'][0],' at time ',t)
-        if np.max(minority_counter) >= minority_pct_ub*np.min(current_community_sizes):
-            break
+	current_community_sizes = np.zeros(k)
+	for i in Gcurrent.nodes():
+		if Gcurrent.node[i]['majority'] == 1:
+			current_community_sizes[Gcurrent.node[i]['group']-1] += 1
 
-    return Gcurrent,Gprevious
+	print('current_community_sizes',current_community_sizes)
+
+	minority_counter = np.zeros(k)
+	nodes = np.random.permutation(Gcurrent.nodes())
+	for i in nodes:
+		print('t',t-1,'i',i,'maj:',Gprevious.node[i]['majority'],'grp:',Gprevious.node[i]['group'][0])
+		if (Gprevious.node[i]['majority']== 1) and (np.random.rand() < np.random.rand()*minority_pct_ub):
+
+			Gprevious.node[i]['majority'] = 0
+			
+			temp_old_group = Gcurrent.node[i]['group'][0]
+			# print(temp_old_group,type(temp_old_group))
+			Gcurrent.node[i]['group'] = np.random.choice(list(range(1,temp_old_group))+list(range(temp_old_group+1,k+1)), 1)
+
+			minority_counter[temp_old_group-1] += 1
+			print('node ', i, ' changed community from ',temp_old_group,' to ',Gcurrent.node[i]['group'][0],' at time ',t)
+		if Gprevious.node[i]['majority'] == 0:
+			Gcurrent.node[i]['majority'] = 0 #if it is a minority, keep it a minority
+			print('node ', i, ' has minority status at time ',t-1)
+
+
+		if np.max(minority_counter) >= minority_pct_ub*np.min(current_community_sizes):
+			break
+
+	return Gcurrent,Gprevious
 
 def generate_fixed_group(params):
 	'''
@@ -71,7 +85,7 @@ def generate_fixed_group(params):
 
 		Gcurrent = nx.Graph()
 		for node in GT[t-1].nodes(data=True):
-			Gcurrent.add_node(node[0],group=node[1]['group'],majority=1)
+			Gcurrent.add_node(node[0],group=node[1]['group'],majority=node[1]['majority'])
 
 		if dynamic=='bernoulli':
 			for i in Gcurrent.nodes():
@@ -140,7 +154,7 @@ if __name__=='__main__':
 	np.random.seed(1000)
 
 	params 					= {}
-	params['n'] 			= 100 # size of the graph
+	params['n'] 			= 20 # size of the graph
 	params['Mutrue'] 		= np.array([[.4,.6],[.6,.4]])# [bernoulli]
 	params['Wtrue'] 		= np.array([[.4,.2],[.2,.4]])
 	params['k'] 			= params['Wtrue'].shape[0] # number of communities
@@ -168,5 +182,5 @@ if __name__=='__main__':
 	params['dynamic'] 		= 'lazy'	
 	GT = generate_fixed_group(params)
 
-	params['spectral_adversarial'] = False
-	GT = generate_fixed_group(params)
+	# params['spectral_adversarial'] = False
+	# GT = generate_fixed_group(params)

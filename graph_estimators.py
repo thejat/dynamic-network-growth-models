@@ -424,3 +424,28 @@ def estimate_bernoulli(params,GT,glog=None):
 	w_hats = get_w_hats_at_each_timeindex(params,GT,gfinal)
 	wfinal,mufinal = estimate_mu_and_w(params,GT,gfinal,w_hats)
 	return {'gfinal':gfinal,'gfinal_metadata':gfinal_metadata,'wfinal':wfinal,'mufinal':mufinal}
+
+
+def remove_minorities(GT):
+	#The output sequence of graphs has lesser number of nodes across time
+	GTmr = [GT[0]]
+
+	for t in range(1, len(GT)):
+		Gnew = GT[0].copy()
+		for i in GT[t-1].nodes():
+			if GT[t-1].node[i]['majority'] == 0:
+				print('removing node',i,'because it was a minority at time ',t-1)
+				Gnew.remove_node(i)
+		GTmr.append(Gnew)
+	return GTmr
+
+
+
+def estimate_changing_by_removing(params,GT,glog=None):
+
+
+	GTmr = remove_minorities(GT)
+
+	log = estimate_lazy(params,GTmr,glog)
+
+	return log

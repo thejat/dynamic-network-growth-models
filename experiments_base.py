@@ -76,5 +76,7 @@ def get_params():
 	params['debug'] 		= False
 	params['noisy_edges'] 	= False
 	params['spectral_adversarial'] = True
-
+	params['minority_pct_ub'] = 0.2
+	params['with_majority_dynamics'] = False
+	
 	return params

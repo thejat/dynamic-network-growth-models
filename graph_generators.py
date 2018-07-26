@@ -7,13 +7,35 @@ def generate_initial_graph(n,k,W):
 	#Graph at time zero
 	Goriginal=nx.Graph()
 	for i in range(1,n+1):
-		Goriginal.add_node(i,group=np.random.choice(range(1,k+1),1)) #fixing groups
+		Goriginal.add_node(i,group=np.random.choice(range(1,k+1),1),majority=1) #fixing groups
 
 	for j in range(1,n+1):
 		for i in range(1,j):
 			if np.random.rand() <= W[Goriginal.node[i]['group']-1,Goriginal.node[j]['group']-1]:
 				Goriginal.add_edge(i,j)
 	return Goriginal
+
+
+def generate_minorities(Gcurrent,Gprevious,k,minority_pct_ub,t):
+
+    current_community_sizes = np.zeros(k)
+    for i in Gcurrent.nodes():
+            current_community_sizes[Gcurrent.node[i]['group']-1] += 1
+
+    minority_counter = np.zeros(k)
+    nodes = np.random.permutation(Gcurrent.nodes())
+    for i in nodes: #we are changing minorities to minorities as well. design choice.
+        if np.random.rand() < np.random.rand()*minority_pct_ub:
+            temp_old_group = Gcurrent.node[i]['group'][0]
+            # print(temp_old_group,type(temp_old_group))
+            Gcurrent.node[i]['group'] = np.random.choice(list(range(1,temp_old_group))+list(range(temp_old_group+1,k+1)), 1)
+            minority_counter[temp_old_group-1] += 1
+            Gprevious.node[i]['majority'] = 0
+            print('node ', i, ' changed community from ',temp_old_group,' to ',Gcurrent.node[i]['group'][0],' at time ',t)
+        if np.max(minority_counter) >= minority_pct_ub*np.min(current_community_sizes):
+            break
+
+    return Gcurrent,Gprevious
 
 def generate_fixed_group(params):
 	'''
@@ -30,6 +52,8 @@ def generate_fixed_group(params):
 	total_time 	= params['total_time']
 	log_start_time 	= params['start_time']
 	flag_adversarial= params['spectral_adversarial']
+	minority_pct_ub = params['minority_pct_ub']
+	with_majority_dynamics = params['with_majority_dynamics']
 
 	#Create the first graph
 	st = log_start_time
@@ -47,7 +71,7 @@ def generate_fixed_group(params):
 
 		Gcurrent = nx.Graph()
 		for node in GT[t-1].nodes(data=True):
-			Gcurrent.add_node(node[0],group=node[1]['group'])
+			Gcurrent.add_node(node[0],group=node[1]['group'],majority=1)
 
 		if dynamic=='bernoulli':
 			for i in Gcurrent.nodes():
@@ -60,6 +84,10 @@ def generate_fixed_group(params):
 							if np.random.rand() <= (W[Gcurrent.node[i]['group'] - 1, Gcurrent.node[j]['group'] - 1])*(Mu[Gcurrent.node[i]['group'] - 1, Gcurrent.node[j]['group'] - 1]):
 								 Gcurrent.add_edge(i, j)
 		elif dynamic=='lazy':
+
+			if with_majority_dynamics is True:
+				Gcurrent,GT[t-1] = generate_minorities(Gcurrent,GT[t-1],k,minority_pct_ub,t)
+
 			for i in Gcurrent.nodes():
 				for j in Gcurrent.nodes():
 					if i < j:
@@ -120,13 +148,22 @@ if __name__=='__main__':
 	params['start_time'] 	= time.time()
 	params['spectral_adversarial'] = False
 	params['total_time'] 	=  4 # power of 2, number of additional graph snapshots
+	params['minority_pct_ub'] = 0.2
+	params['with_majority_dynamics'] = False
 
+	# params['dynamic'] 		= 'bernoulli'
+	# GT = generate_fixed_group(params)
 
-	params['dynamic'] 		= 'bernoulli'
-	GT = generate_fixed_group(params)
+	# params['spectral_adversarial'] = True
+	# GT = generate_fixed_group(params)
 
-	params['spectral_adversarial'] = True
-	GT = generate_fixed_group(params)
+	# params['dynamic'] 		= 'lazy'	
+	# GT = generate_fixed_group(params)
+
+	# params['spectral_adversarial'] = False
+	# GT = generate_fixed_group(params)
+
+	params['with_majority_dynamics'] = True
 
 	params['dynamic'] 		= 'lazy'	
 	GT = generate_fixed_group(params)

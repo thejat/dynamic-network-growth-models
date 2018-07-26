@@ -79,6 +79,34 @@ def generate_fixed_group(params):
 
 	return GT
 
+def add_noise(GT,noise_type='random',noise_level=None):
+	if noise_level is None:
+		noise_level = 0.8
+	GTnoisy = []
+	if noise_type=='random':
+		for G in GT:
+			Gnew = G.copy()
+			for e in G.edges():
+				if np.random.rand() <= noise_level:
+						Gnew.remove_edge(*e)
+			GTnoisy.append(Gnew)
+	else:
+		GTnoisy = GT #TBD
+
+	return GTnoisy
+
+def graph_stats_fixed_group(params,GT):
+	nodecounts = []
+	edgecounts = []
+	for G in GT:
+		nodecounts.append(len(G.nodes()))
+		edgecounts.append(len(G.edges()))
+
+	gtrue = {x[0]:x[1]['group'][0] for x in GT[0].nodes(data=True)} #only works for fixed group
+	community_sizes = Counter([gtrue[i] for i in gtrue])
+
+	return {'gtrue':gtrue, 'nodecounts': nodecounts, 'edgecounts': edgecounts, 'community_sizes': community_sizes}
+
 if __name__=='__main__':
 	np.random.seed(1000)
 

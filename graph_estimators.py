@@ -3,7 +3,7 @@ import numpy as np
 import scipy as sp
 import time, pprint, copy
 import networkx as nx
-from graph_tool import Graph, inference
+# from graph_tool import Graph, inference
 import pulp #tbd: gurobipy/cplex
 from sklearn.cluster import spectral_clustering
 from sklearn import metrics
@@ -87,7 +87,7 @@ def unify_communities_LP(ghats,k):
 
 	return gfinal#, taus, Qs
 
-def unify_communities_sets(ghats,k):
+def unify_communities_CM(ghats,k):
 
 	Qs = {}
 	QQtotal = np.zeros((len(ghats[0]),len(ghats[0])))
@@ -130,18 +130,39 @@ def get_communities_single_graph(G,k):
 	# 	partition[x] = int(labels[e])+1 #Gives the # of nodes in each community?
 	# return partition
 
+def unify_communities_spectral_mean(params,GT):
+	#This is the technique compared by Han Xu and Airoldi 2015 ICML (who propose variationam profile MLE algo)
+
+	adj_matrix_summed = sp.sparse.csr_matrix(np.zeros((len(GT[0].nodes),len(GT[0].nodes))),dtype=int)
+	for G in GT:
+		adj_matrix_summed += nx.adjacency_matrix(G)
+
+	spout = spectral_clustering(adj_matrix_summed,n_clusters=params['k']) + 1
+	gfinal = {}
+	for i in GT[0].nodes():
+		gfinal[i] = spout[i-1]
+	return gfinal,{}
+
 def get_communities_and_unify(params,GT):
 
+	#Unify by averaging over adjacency matrices
+	if params['unify_method']=='Spectral-Mean':
+		gfinals,ghats = unify_communities_spectral_mean(params,GT)
+
+	return gfinal,ghats
+
+	#If not doing the above, then unify after getting ghats
+
 	# print('\t\tEstimating gfinal start: ',time.time()-params['start_time'])
-	#Estimate communities for individual snapshots
+	#First, estimate communities for individual snapshots
 	ghats = {}
 	for t,G in enumerate(GT):
 		ghats[t] = get_communities_single_graph(G,params['k'])
 
-	#Unify
-	if params['unify_method']=='sets':
-		gfinal = unify_communities_sets(ghats,params['k'])
-	elif params['unify_method']=='lp':
+	#Second, unify
+	if params['unify_method']=='UnifyCM':
+		gfinal = unify_communities_CM(ghats,params['k'])
+	elif params['unify_method']=='UnifyLP':
 		gfinal = unify_communities_LP(ghats,params['k'])
 	else:
 		return NotImplementedError #incorrect tbd
@@ -154,26 +175,6 @@ def get_communities_and_unify(params,GT):
 
 	# print('\t\tEstimating gfinal end: ',time.time()-params['start_time'])
 	return gfinal,ghats
-
-
-def unify_by_averaging_directly(params,GT):
-	#This is the technique by Han Xu and Airoldi 2015 ICML
-
-	adj_matrix_summed = sp.sparse.csr_matrix(np.zeros((len(GT[0].nodes),len(GT[0].nodes))),dtype=int)
-	for G in GT:
-		adj_matrix_summed += nx.adjacency_matrix(G)
-
-	######### METHOD 1
-	spout = spectral_clustering(adj_matrix_summed,n_clusters=params['k']) + 1
-	gfinal = {}
-	for i in GT[0].nodes():
-		gfinal[i] = spout[i-1]
-	return gfinal,{}
-
-	# ######### METHOD 2
-	# # TBD
-	# gfinal = get_communities_single_graph(G,params['k'])
-	# return gfinal,{}
 
 def get_w_hats_at_each_timeindex(params,GT,gfinal):
 	#Estimate w_hat_t_r_s for all t, r, and s in the sequence
@@ -355,7 +356,6 @@ def estimate_xi_and_w(params,GT,gfinal,w_hats):
 
 	return wfinal,xifinal
 
-
 def get_communities_and_unify_debug_wrapper(params,GT,glog=None):
 
 
@@ -371,23 +371,24 @@ def get_communities_and_unify_debug_wrapper(params,GT,glog=None):
 	gfinal_metadata[params['unify_method']] = {'gfinal':gfinal,'ghats':ghats}
 
 	if params['compare_unify']: #do the comparisons across different methods
-		# print('Cross check the communities returned by sets (done above) and LP and Avg-Spectral')
+		# print('Cross check the communities returned by UnifyCM and UnifyLP and Spectral-Mean')
 		
-		comparisons0 = set(['sets','lp','avg-spectral'])
+		comparisons0 = set(['UnifyCM','UnifyLP','Spectral-Mean'])
 		comparisons = comparisons0.difference([params['unify_method']])
 
 		for method in comparisons:
-			if method=='lp':
-				params['unify_method'] 	= 'lp'
-				gfinalLP,ghatsLP = get_communities_and_unify(params,GT)
-				gfinal_metadata['lp'] = {'gfinal':gfinalLP,'ghats':ghatsLP}
-			elif method=='sets':
-				params['unify_method'] 	= 'sets'
-				gfinalSets,ghatsSets = get_communities_and_unify(params,GT)
-				gfinal_metadata['sets'] = {'gfinal':gfinalSets,'ghats':ghatsSets}
-			elif method=='avg-spectral':
-				gfinalSP,ghatsSP = unify_by_averaging_directly(params,GT)
-				gfinal_metadata['avg-spectral'] = {'gfinal':gfinalSP,'ghats':ghatsSP}
+			if method=='UnifyLP':
+				params['unify_method'] 	= method
+				gfinal2,ghats2 = get_communities_and_unify(params,GT)
+				gfinal_metadata[method] = {'gfinal':gfinal2,'ghats':ghats2}
+			elif method=='UnifyCM':
+				params['unify_method'] 	= method
+				gfinal2,ghats2 = get_communities_and_unify(params,GT)
+				gfinal_metadata[method] = {'gfinal':gfinal2,'ghats':ghats2}
+			elif method=='Spectral-Mean':
+				params['unify_method'] 	= method
+				gfinal2,ghats2 = get_communities_and_unify(params,GT)
+				gfinal_metadata[method] = {'gfinal':gfinal2,'ghats':ghats2}
 
 		def get_group_error2(gtrue,gfinal):
 			a,b = [0]*len(gtrue),[0]*len(gtrue)

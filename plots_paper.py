@@ -3,7 +3,7 @@ import pickle, pprint, os, time, glob
 import seaborn as sns
 from matplotlib import pyplot as plt
 import pulp
-from sklearn import metrics
+from graph_estimators import error_between_scalars, error_between_matrices, error_between_groups
 
 #Style
 plt.style.use('fivethirtyeight')
@@ -109,36 +109,6 @@ def plot_fixed_group(fname,flag_write=False):
 		tau = get_permutation_from_LP(Qtrue,Qfinal)
 
 		return {'tau':tau, 'Qtrue':Qtrue, 'Qfinal':Qfinal}
-
-	def error_between_groups(gtrue,gfinal,tau_info=None):
-
-		# #First type
-		# assert tau_info is not None
-		# tau 	= tau_info['tau']
-		# Qtrue 	= tau_info['Qtrue']
-		# Qfinal 	= tau_info['Qfinal']
-		# return np.linalg.norm(Qtrue-np.dot(Qfinal,np.linalg.inv(tau)),'fro')*1.0/np.linalg.norm(Qtrue,'fro')
-
-		#Second and third types
-		a,b = [0]*len(gtrue),[0]*len(gtrue)
-		for i in gtrue:
-			a[i-1],b[i-1] = gtrue[i], gfinal[i]
-		# return 1-metrics.adjusted_rand_score(a,b)
-		return 1-metrics.adjusted_mutual_info_score(a,b)
-
-	def error_between_matrices(a,b,attribute,tau_info):
-		tau 	= tau_info['tau']
-		print(attribute)
-		pprint.pprint(tau)
-		pprint.pprint(a)
-		pprint.pprint(b)
-		# bnew = np.dot(np.dot(tau,b),tau) #this has some error tbd, is not needed with W and Mu are symmetric
-		# pprint.pprint(bnew)
-		print('np.linalg.norm(a-b): ',np.linalg.norm(a-b),'\t np.linalg.norm(a): ',np.linalg.norm(a))
-		return np.linalg.norm(a-b)/np.linalg.norm(a)
-
-	def error_between_scalars(a,b):
-		return np.abs(a-b)*1.0/a
 
 	error = {}
 	error_std = {}

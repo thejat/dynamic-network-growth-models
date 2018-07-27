@@ -355,6 +355,38 @@ def estimate_xi_and_w(params,GT,gfinal,w_hats):
 
 	return wfinal,xifinal
 
+
+def error_between_matrices(a,b,attribute,tau_info):
+	tau 	= tau_info['tau']
+	print(attribute)
+	pprint.pprint(tau)
+	pprint.pprint(a)
+	pprint.pprint(b)
+	# bnew = np.dot(np.dot(tau,b),tau) #this has some error tbd, is not needed with W and Mu are symmetric
+	# pprint.pprint(bnew)
+	print('np.linalg.norm(a-b): ',np.linalg.norm(a-b),'\t np.linalg.norm(a): ',np.linalg.norm(a))
+	return np.linalg.norm(a-b)/np.linalg.norm(a)
+
+def error_between_scalars(a,b):
+	return np.abs(a-b)*1.0/a
+
+
+def error_between_groups(gtrue,gfinal,tau_info=None):
+
+	# #First type
+	# assert tau_info is not None
+	# tau 	= tau_info['tau']
+	# Qtrue 	= tau_info['Qtrue']
+	# Qfinal 	= tau_info['Qfinal']
+	# return np.linalg.norm(Qtrue-np.dot(Qfinal,np.linalg.inv(tau)),'fro')*1.0/np.linalg.norm(Qtrue,'fro')
+
+	#Second and third types
+	a,b = [0]*len(gtrue),[0]*len(gtrue)
+	for idx,i in enumerate(gtrue):
+		a[idx],b[idx] = gtrue[i], gfinal[i]
+	# return 1-metrics.adjusted_rand_score(a,b)
+	return 1-metrics.adjusted_mutual_info_score(a,b)
+
 def get_communities_and_unify_debug_wrapper(params,GT,glog=None):
 
 
@@ -389,16 +421,8 @@ def get_communities_and_unify_debug_wrapper(params,GT,glog=None):
 				gfinal2,ghats2 = get_communities_and_unify(params,GT)
 				gfinal_metadata[method] = {'gfinal':gfinal2,'ghats':ghats2}
 
-		def get_group_error2(gtrue,gfinal):
-			a,b = [0]*len(gtrue),[0]*len(gtrue)
-			for i in gtrue:
-				# print(i)
-				a[i-1],b[i-1] = gtrue[i], gfinal[i]
-			# return 1-metrics.adjusted_rand_score(a,b)
-			return 1-metrics.adjusted_mutual_info_score(a,b)
-
 		for method in comparisons0:
-			print("gfinal of ",method,"\t and true differ: ",get_group_error2(glog['gtrue'],gfinal_metadata[method]['gfinal'])," for t=",len(GT))
+			print("gfinal of ",method,"\t and true differ: ",error_between_groups(glog['gtrue'],gfinal_metadata[method]['gfinal'])," for t=",len(GT))
 
 	return gfinal,gfinal_metadata
 
@@ -425,27 +449,141 @@ def estimate_bernoulli(params,GT,glog=None):
 	wfinal,mufinal = estimate_mu_and_w(params,GT,gfinal,w_hats)
 	return {'gfinal':gfinal,'gfinal_metadata':gfinal_metadata,'wfinal':wfinal,'mufinal':mufinal}
 
+def get_minority_nodes(G):
+    temp_node_ids = []
+    for x in G.nodes():
+        if G.node[x]['majority']==0:
+            temp_node_ids.append(x)
+    return temp_node_ids
 
-def remove_minorities(GT):
+def remove_minorities(GT,till_time=None):
+	'''
+	if a node is minority at time s, then it is removed in the graph s+1 NOT in graph s
+	'''
+
+	assert len(GT) > 0
+
+	if till_time is None:
+		till_time = len(GT)-1
+	else:
+		assert len(GT) > till_time
+
 	#The output sequence of graphs has lesser number of nodes across time
 	GTmr = [GT[0]]
 
-	for t in range(1, len(GT)):
-		Gnew = GT[0].copy()
-		for i in GT[t-1].nodes():
-			if GT[t-1].node[i]['majority'] == 0:
-				print('removing node',i,'because it was a minority at time ',t-1)
-				Gnew.remove_node(i)
+	for t in range(1, till_time+1):
+		Gnew = GT[t].copy()
+		minority_nodes = get_minority_nodes(GT[t-1])
+		for i in minority_nodes:
+			# print('removing node',i,'because it was a minority at time ',t-1)
+			Gnew.remove_node(i)
 		GTmr.append(Gnew)
 	return GTmr
 
+def get_new_node_ids(temp_node_ids):
+    mapping = {'old2new': {}, 'new2old': {}}
+    for idx,x in enumerate(temp_node_ids):
+        mapping['old2new'][x] =idx+1 #node ids should always start from 1
+        mapping['new2old'][idx+1] = x
+    return mapping
+
+def get_subgraph(Gcurrent,nodes):
+    G = nx.Graph()
+    for node in nodes:
+        G.add_node(node)
+    for node1 in nodes:
+        for node2 in nodes:
+            if Gcurrent.has_edge(node1,node2):
+                G.add_edge(node1,node2)
+    return G
+
+def create_two_SBM_graphs(GT,t):
+    #use the majority minority labels in Gprevious to create two graphs using edges in Gcurrent
+    assert t > 0
+    Gcurrent = GT[t]
+    Gprevious = GT[t-1]
+    if t==1:
+        #we only care about new minorities
+        minority_nodes = get_minority_nodes(Gprevious)
+        new_minority_nodes = minority_nodes
+    else:
+        minority_nodes = get_minority_nodes(Gprevious)
+        older_minority_nodes = get_minority_nodes(GT[t-2])
+        new_minority_nodes = [x for x in minority_nodes if x not in older_minority_nodes]
+    assert len(new_minority_nodes) > 1 #this is quite weak
+    Gminority = get_subgraph(Gcurrent,new_minority_nodes)
+    majority_nodes = [x for x in Gprevious.nodes() if x not in minority_nodes]
+    Gmajority = get_subgraph(Gcurrent,majority_nodes)
+    
+    return Gmajority,Gminority
 
 
-def estimate_changing_by_removing(params,GT,glog=None):
+def get_communities_single_graph_index_wrapper(G,k):
+    mapping = get_new_node_ids(G.nodes())
+    Gtemp = nx.relabel_nodes(G,mapping['old2new'],copy=True)
+    
+    gtemp = get_communities_single_graph(Gtemp,k)
+    
+    gfinal = {}
+    for new_node in gtemp:
+        gfinal[mapping['new2old'][new_node]] = gtemp[new_node]
 
+    return gfinal
 
-	GTmr = remove_minorities(GT)
+def get_same_sized_graph_sequence(GTmr):
+    GTsamesized = []
+    retained_nodes= GTmr[-1].nodes()
+    mapping = get_new_node_ids(retained_nodes)
+    for G in GTmr:
+        Gnew = G.copy()
+        to_be_removed = [x for x in Gnew.nodes() if x not in retained_nodes]
+        for node in to_be_removed:
+            Gnew.remove_node(node)
+        Gtemp = nx.relabel_nodes(Gnew,mapping['old2new'],copy=True)
+        GTsamesized.append(Gtemp)
+    return GTsamesized,mapping
 
-	log = estimate_lazy(params,GTmr,glog)
+def error_between_subsets(GT,t,gtrue,gestimated,subset_type='minority'):
+    if subset_type=='minority':
+        subset_nodes = [x[0] for x in GT[t-1].nodes(data=True) if x[1]['majority']==0]
+    else:
+        subset_nodes = [x[0] for x in GT[t-1].nodes(data=True) if x[1]['majority']==1]
+        
+    gtrue_subset = {}
+    gestimated_subset = {}
+    for x in subset_nodes:
+        gtrue_subset[x] = gtrue[x]
+        gestimated_subset[x] = gestimated[x]
+    # print(gtrue_subset)
+    # print(gestimated_subset)
+    return error_between_groups(gtrue_subset,gestimated_subset)
 
-	return log
+def estimate_communities_including_minorities(params,GT,t,gmajority,gminority):
+    crosslinkmap,crosslinkmat = estimate_crosslink_freq(params,GT[t],gmajority,gminority)
+    print(crosslinkmat)
+    print(crosslinkmap)
+    crosslinkmap = {1:1,2:2}
+    gestimated = {}
+    majority_nodes = [x[0] for x in GT[t-1].nodes(data=True) if x[1]['majority']==1]
+    minority_nodes = [x[0] for x in GT[t-1].nodes(data=True) if x[1]['majority']==0]
+    for node in GT[t].nodes():
+        if node in majority_nodes:
+            gestimated[node] = gmajority[node]
+        else:
+            gestimated[node] = crosslinkmap[gminority[node]]
+    return gestimated
+
+def estimate_crosslink_freq(params,G,gmajority,gminority):
+    crosslinkmat = np.zeros((params['k'],params['k']))
+    for r in range(1,params['k']+1):
+        for s in range(1,params['k']+1):
+            nodes1 = [x for x in gminority if gminority[x]==r]
+            nodes2 = [x for x in gmajority if gmajority[x]==s]
+            for node1 in nodes1:
+                for node2 in nodes2:
+                    if G.has_edge(node1,node2) or G.has_edge(node2,node1):
+                        crosslinkmat[r-1,s-1] += 1
+    crosslinkmap = {}
+    for r in range(1,params['k']+1):
+        crosslinkmap[r] = np.argmax(crosslinkmat[r-1,:])+1
+    return crosslinkmap,crosslinkmat

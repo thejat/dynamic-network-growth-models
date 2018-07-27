@@ -5,7 +5,7 @@ if os.environ.get('DISPLAY','') == '':
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
-from graph_generators import generate_fixed_group, add_noise, graph_stats_fixed_group
+from graph_generators import generate_graph_sequence, add_noise, graph_stats_fixed_group
 from graph_estimators import estimate_lazy, estimate_bernoulli
 import time, pickle, os, math
 
@@ -35,7 +35,7 @@ def monte_carlo(params):
 
 	#Get graph sequence
 	# print("Generate data: Monte Carlo Run # ",mcrun+1, " of ",params['n_mcruns'],' starting: ',time.time() - params['start_time'])
-	GT = generate_fixed_group(params)	
+	GT = generate_graph_sequence(params)	
 	glog = graph_stats_fixed_group(params,GT)
 	GTnoisy = GT
 	if params['noisy_edges'] is True:

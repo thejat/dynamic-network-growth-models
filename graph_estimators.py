@@ -450,11 +450,11 @@ def estimate_bernoulli(params,GT,glog=None):
 	return {'gfinal':gfinal,'gfinal_metadata':gfinal_metadata,'wfinal':wfinal,'mufinal':mufinal}
 
 def get_minority_nodes(G):
-    temp_node_ids = []
-    for x in G.nodes():
-        if G.node[x]['majority']==0:
-            temp_node_ids.append(x)
-    return temp_node_ids
+	temp_node_ids = []
+	for x in G.nodes():
+		if G.node[x]['majority']==0:
+			temp_node_ids.append(x)
+	return temp_node_ids
 
 def remove_minorities(GT,till_time=None):
 	'''
@@ -481,109 +481,116 @@ def remove_minorities(GT,till_time=None):
 	return GTmr
 
 def get_new_node_ids(temp_node_ids):
-    mapping = {'old2new': {}, 'new2old': {}}
-    for idx,x in enumerate(temp_node_ids):
-        mapping['old2new'][x] =idx+1 #node ids should always start from 1
-        mapping['new2old'][idx+1] = x
-    return mapping
+	mapping = {'old2new': {}, 'new2old': {}}
+	for idx,x in enumerate(temp_node_ids):
+		mapping['old2new'][x] =idx+1 #node ids should always start from 1
+		mapping['new2old'][idx+1] = x
+	return mapping
 
 def get_subgraph(Gcurrent,nodes):
-    G = nx.Graph()
-    for node in nodes:
-        G.add_node(node)
-    for node1 in nodes:
-        for node2 in nodes:
-            if Gcurrent.has_edge(node1,node2):
-                G.add_edge(node1,node2)
-    return G
+	G = nx.Graph()
+	for node in nodes:
+		G.add_node(node)
+	for node1 in nodes:
+		for node2 in nodes:
+			if Gcurrent.has_edge(node1,node2):
+				G.add_edge(node1,node2)
+	return G
 
 def create_two_SBM_graphs(GT,t):
-    #use the majority minority labels in Gprevious to create two graphs using edges in Gcurrent
-    assert t > 0
-    Gcurrent = GT[t]
-    Gprevious = GT[t-1]
-    if t==1:
-        #we only care about new minorities
-        minority_nodes = get_minority_nodes(Gprevious)
-        new_minority_nodes = minority_nodes
-    else:
-        minority_nodes = get_minority_nodes(Gprevious)
-        older_minority_nodes = get_minority_nodes(GT[t-2])
-        new_minority_nodes = [x for x in minority_nodes if x not in older_minority_nodes]
-    assert len(new_minority_nodes) > 1 #this is quite weak
-    Gminority = get_subgraph(Gcurrent,new_minority_nodes)
-    majority_nodes = [x for x in Gprevious.nodes() if x not in minority_nodes]
-    Gmajority = get_subgraph(Gcurrent,majority_nodes)
-    
-    return Gmajority,Gminority
+	#use the majority minority labels in Gprevious to create two graphs using edges in Gcurrent
+	assert t > 0
+	Gcurrent = GT[t]
+	Gprevious = GT[t-1]
+	if t==1:
+		#we only care about new minorities
+		minority_nodes = get_minority_nodes(Gprevious)
+		new_minority_nodes = minority_nodes
+	else:
+		minority_nodes = get_minority_nodes(Gprevious)
+		older_minority_nodes = get_minority_nodes(GT[t-2])
+		new_minority_nodes = [x for x in minority_nodes if x not in older_minority_nodes]
+	assert len(new_minority_nodes) > 1 #this is quite weak
+	Gminority = get_subgraph(Gcurrent,new_minority_nodes)
+	majority_nodes = [x for x in Gprevious.nodes() if x not in minority_nodes]
+	Gmajority = get_subgraph(Gcurrent,majority_nodes)
+	
+	return Gmajority,Gminority
 
 
 def get_communities_single_graph_index_wrapper(G,k):
-    mapping = get_new_node_ids(G.nodes())
-    Gtemp = nx.relabel_nodes(G,mapping['old2new'],copy=True)
-    
-    gtemp = get_communities_single_graph(Gtemp,k)
-    
-    gfinal = {}
-    for new_node in gtemp:
-        gfinal[mapping['new2old'][new_node]] = gtemp[new_node]
+	mapping = get_new_node_ids(G.nodes())
+	Gtemp = nx.relabel_nodes(G,mapping['old2new'],copy=True)
+	
+	gtemp = get_communities_single_graph(Gtemp,k)
+	
+	gfinal = {}
+	for new_node in gtemp:
+		gfinal[mapping['new2old'][new_node]] = gtemp[new_node]
 
-    return gfinal
+	return gfinal
 
 def get_same_sized_graph_sequence(GTmr):
-    GTsamesized = []
-    retained_nodes= GTmr[-1].nodes()
-    mapping = get_new_node_ids(retained_nodes)
-    for G in GTmr:
-        Gnew = G.copy()
-        to_be_removed = [x for x in Gnew.nodes() if x not in retained_nodes]
-        for node in to_be_removed:
-            Gnew.remove_node(node)
-        Gtemp = nx.relabel_nodes(Gnew,mapping['old2new'],copy=True)
-        GTsamesized.append(Gtemp)
-    return GTsamesized,mapping
+	GTsamesized = []
+	retained_nodes= GTmr[-1].nodes()
+	mapping = get_new_node_ids(retained_nodes)
+	for G in GTmr:
+		Gnew = G.copy()
+		to_be_removed = [x for x in Gnew.nodes() if x not in retained_nodes]
+		for node in to_be_removed:
+			Gnew.remove_node(node)
+		Gtemp = nx.relabel_nodes(Gnew,mapping['old2new'],copy=True)
+		GTsamesized.append(Gtemp)
+	return GTsamesized,mapping
 
 def error_between_subsets(GT,t,gtrue,gestimated,subset_type='minority'):
-    if subset_type=='minority':
-        subset_nodes = [x[0] for x in GT[t-1].nodes(data=True) if x[1]['majority']==0]
-    else:
-        subset_nodes = [x[0] for x in GT[t-1].nodes(data=True) if x[1]['majority']==1]
-        
-    gtrue_subset = {}
-    gestimated_subset = {}
-    for x in subset_nodes:
-        gtrue_subset[x] = gtrue[x]
-        gestimated_subset[x] = gestimated[x]
-    # print(gtrue_subset)
-    # print(gestimated_subset)
-    return error_between_groups(gtrue_subset,gestimated_subset)
+	if subset_type=='minority':
+		subset_nodes = [x[0] for x in GT[t-1].nodes(data=True) if x[1]['majority']==0]
+	else:
+		subset_nodes = [x[0] for x in GT[t-1].nodes(data=True) if x[1]['majority']==1]
+		
+	gtrue_subset = {}
+	gestimated_subset = {}
+	for x in subset_nodes:
+		gtrue_subset[x] = gtrue[x]
+		gestimated_subset[x] = gestimated[x]
+	# print(gtrue_subset)
+	# print(gestimated_subset)
+	return error_between_groups(gtrue_subset,gestimated_subset)
 
-def estimate_communities_including_minorities(params,GT,t,gmajority,gminority):
-    crosslinkmap,crosslinkmat = estimate_crosslink_freq(params,GT[t],gmajority,gminority)
-    print(crosslinkmat)
-    print(crosslinkmap)
-    crosslinkmap = {1:1,2:2}
-    gestimated = {}
-    majority_nodes = [x[0] for x in GT[t-1].nodes(data=True) if x[1]['majority']==1]
-    minority_nodes = [x[0] for x in GT[t-1].nodes(data=True) if x[1]['majority']==0]
-    for node in GT[t].nodes():
-        if node in majority_nodes:
-            gestimated[node] = gmajority[node]
-        else:
-            gestimated[node] = crosslinkmap[gminority[node]]
-    return gestimated
+def estimate_communities_including_minorities(params,GT,t,gmajority,gminority, xifinal):
+	crosslinkmap,crosslinkmat = estimate_crosslink_freq(params,GT[t],gmajority,gminority,xifinal)
+	# crosslinkmap = {1:1,2:2}
+	print(crosslinkmat)
+	print(crosslinkmap)
+	gestimated = {}
+	majority_nodes = [x[0] for x in GT[t-1].nodes(data=True) if x[1]['majority']==1]
+	minority_nodes = [x[0] for x in GT[t-1].nodes(data=True) if x[1]['majority']==0]
+	for node in GT[t].nodes():
+		if node in majority_nodes:
+			gestimated[node] = gmajority[node]
+		else:
+			gestimated[node] = crosslinkmap[gminority[node]]
+	return gestimated
 
 def estimate_crosslink_freq(params,G,gmajority,gminority):
-    crosslinkmat = np.zeros((params['k'],params['k']))
-    for r in range(1,params['k']+1):
-        for s in range(1,params['k']+1):
-            nodes1 = [x for x in gminority if gminority[x]==r]
-            nodes2 = [x for x in gmajority if gmajority[x]==s]
-            for node1 in nodes1:
-                for node2 in nodes2:
-                    if G.has_edge(node1,node2) or G.has_edge(node2,node1):
-                        crosslinkmat[r-1,s-1] += 1
-    crosslinkmap = {}
-    for r in range(1,params['k']+1):
-        crosslinkmap[r] = np.argmax(crosslinkmat[r-1,:])+1
-    return crosslinkmap,crosslinkmat
+	crosslinkmat = np.zeros((params['k'],params['k']))
+	for r in range(1,params['k']+1):
+		for s in range(1,params['k']+1):
+			nodes1 = [x for x in gminority if gminority[x]==r]
+			nodes2 = [x for x in gmajority if gmajority[x]==s]
+			for node1 in nodes1:
+				for node2 in nodes2:
+					if G.has_edge(node1,node2) or G.has_edge(node2,node1):
+						crosslinkmat[r-1,s-1] += 1
+	crosslinkmap = {}
+	if 1 - xifinal - xifinal*1.0/(params['k']-1) > 0:
+		print('assign to highest crosslink')
+		temp_map = np.argmax
+	else:
+		print('assign to lowest crosslink')
+		temp_map = np.argmin
+
+	for r in range(1,params['k']+1):
+		crosslinkmap[r] = temp_map(crosslinkmat[r-1,:])+1
+	return crosslinkmap,crosslinkmat

@@ -573,7 +573,7 @@ def estimate_communities_including_minorities(params,GT,t,gmajority,gminority, x
 			gestimated[node] = crosslinkmap[gminority[node]]
 	return gestimated
 
-def estimate_crosslink_freq(params,G,gmajority,gminority):
+def estimate_crosslink_freq(params,G,gmajority,gminority,xifinal):
 	crosslinkmat = np.zeros((params['k'],params['k']))
 	for r in range(1,params['k']+1):
 		for s in range(1,params['k']+1):
